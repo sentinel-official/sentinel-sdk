@@ -15,7 +15,7 @@ require (
 	github.com/tendermint/tendermint v0.34.27
 	github.com/v2fly/v2ray-core/v5 v5.16.1
 	golang.zx2c4.com/wireguard/windows v0.5.3
-	google.golang.org/protobuf v1.34.1
+	google.golang.org/protobuf v1.34.2
 )
 
 require (
