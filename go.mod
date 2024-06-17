@@ -11,7 +11,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.45.16
 	github.com/sentinel-official/hub v0.11.5
 	github.com/shirou/gopsutil/v3 v3.24.4
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.1
 	github.com/tendermint/tendermint v0.34.27
 	github.com/v2fly/v2ray-core/v5 v5.16.1
 	golang.zx2c4.com/wireguard/windows v0.5.3
