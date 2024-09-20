@@ -5,12 +5,47 @@ import (
 	"errors"
 
 	"github.com/cosmos/cosmos-sdk/types/query"
+	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
-
-	"github.com/sentinel-official/sentinel-go-sdk/flags"
 )
 
-// Page represents page-related options.
+// Constants for the Page struct fields.
+const (
+	NamePageCountTotal = "PageCountTotal"
+	NamePageKey        = "PageKey"
+	NamePageLimit      = "PageLimit"
+	NamePageOffset     = "PageOffset"
+	NamePageReverse    = "PageReverse"
+)
+
+// Default values for the Page fields.
+const (
+	DefaultPageCountTotal = false
+	DefaultPageKey        = ""
+	DefaultPageLimit      = 10
+	DefaultPageOffset     = 0
+	DefaultPageReverse    = false
+)
+
+// Flags for command-line options for Page.
+const (
+	FlagPageCountTotal = "page.count-total"
+	FlagPageKey        = "page.key"
+	FlagPageLimit      = "page.limit"
+	FlagPageOffset     = "page.offset"
+	FlagPageReverse    = "page.reverse"
+)
+
+// init function sets the default values for page-related parameters at package initialization.
+func init() {
+	SetDefault(NamePageCountTotal, DefaultPageCountTotal)
+	SetDefault(NamePageKey, DefaultPageKey)
+	SetDefault(NamePageLimit, DefaultPageLimit)
+	SetDefault(NamePageOffset, DefaultPageOffset)
+	SetDefault(NamePageReverse, DefaultPageReverse)
+}
+
+// Page defines a structure for holding pagination-related parameters.
 type Page struct {
 	CountTotal bool   `json:"count_total" toml:"count_total"` // CountTotal indicates whether to include total count in paged queries.
 	Key        string `json:"key" toml:"key"`                 // Key is the base64-encoded key for page.
@@ -22,50 +57,50 @@ type Page struct {
 // NewPage creates a new Page instance with default values.
 func NewPage() *Page {
 	return &Page{
-		CountTotal: flags.DefaultPageCountTotal,
-		Key:        flags.DefaultPageKey,
-		Limit:      flags.DefaultPageLimit,
-		Offset:     flags.DefaultPageOffset,
-		Reverse:    flags.DefaultPageReverse,
+		CountTotal: cast.ToBool(GetDefault(NamePageCountTotal)),
+		Key:        cast.ToString(GetDefault(NamePageKey)),
+		Limit:      cast.ToUint64(GetDefault(NamePageLimit)),
+		Offset:     cast.ToUint64(GetDefault(NamePageOffset)),
+		Reverse:    cast.ToBool(GetDefault(NamePageReverse)),
 	}
 }
 
-// WithCountTotal sets the CountTotal field and returns the updated Page instance.
+// WithCountTotal sets whether to include total count in the page and returns the modified Page.
 func (p *Page) WithCountTotal(v bool) *Page {
 	p.CountTotal = v
 	return p
 }
 
-// WithKey sets the Key field with a base64-encoded value and returns the updated Page instance.
+// WithKey sets the base64-encoded key for the page and returns the modified Page.
 func (p *Page) WithKey(v []byte) *Page {
 	p.Key = base64.StdEncoding.EncodeToString(v)
 	return p
 }
 
-// WithLimit sets the Limit field and returns the updated Page instance.
+// WithLimit sets the maximum number of results per page and returns the modified Page.
 func (p *Page) WithLimit(v uint64) *Page {
 	p.Limit = v
 	return p
 }
 
-// WithOffset sets the Offset field and returns the updated Page instance.
+// WithOffset sets the offset for the page and returns the modified Page.
 func (p *Page) WithOffset(v uint64) *Page {
 	p.Offset = v
 	return p
 }
 
-// WithReverse sets the Reverse field and returns the updated Page instance.
+// WithReverse sets whether to reverse the order of results in the page and returns the modified Page.
 func (p *Page) WithReverse(v bool) *Page {
 	p.Reverse = v
 	return p
 }
 
-// GetCountTotal returns the CountTotal field.
+// GetCountTotal returns whether to include total count in the page.
 func (p *Page) GetCountTotal() bool {
 	return p.CountTotal
 }
 
-// GetKey returns the decoded Key field.
+// GetKey returns the decoded base64 key for the page.
 func (p *Page) GetKey() []byte {
 	v, err := base64.StdEncoding.DecodeString(p.Key)
 	if err != nil {
@@ -75,17 +110,17 @@ func (p *Page) GetKey() []byte {
 	return v
 }
 
-// GetLimit returns the Limit field.
+// GetLimit returns the maximum number of results per page.
 func (p *Page) GetLimit() uint64 {
 	return p.Limit
 }
 
-// GetOffset returns the Offset field.
+// GetOffset returns the offset for the page.
 func (p *Page) GetOffset() uint64 {
 	return p.Offset
 }
 
-// GetReverse returns the Reverse field.
+// GetReverse returns whether the order of results is reversed in the page.
 func (p *Page) GetReverse() bool {
 	return p.Reverse
 }
@@ -131,39 +166,103 @@ func (p *Page) PageRequest() *query.PageRequest {
 	}
 }
 
-// NewPageFromCmd creates and returns a Page from the given cobra command's flags.
+// GetPageCountTotalFromCmd retrieves whether to include total count from the command-line flags.
+func GetPageCountTotalFromCmd(cmd *cobra.Command) (bool, error) {
+	return cmd.Flags().GetBool(FlagPageCountTotal)
+}
+
+// GetPageKeyFromCmd retrieves the base64-encoded key from the command-line flags.
+func GetPageKeyFromCmd(cmd *cobra.Command) (string, error) {
+	return cmd.Flags().GetString(FlagPageKey)
+}
+
+// GetPageLimitFromCmd retrieves the limit from the command-line flags.
+func GetPageLimitFromCmd(cmd *cobra.Command) (uint64, error) {
+	return cmd.Flags().GetUint64(FlagPageLimit)
+}
+
+// GetPageOffsetFromCmd retrieves the offset from the command-line flags.
+func GetPageOffsetFromCmd(cmd *cobra.Command) (uint64, error) {
+	return cmd.Flags().GetUint64(FlagPageOffset)
+}
+
+// GetPageReverseFromCmd retrieves whether to reverse the order of results from the command-line flags.
+func GetPageReverseFromCmd(cmd *cobra.Command) (bool, error) {
+	return cmd.Flags().GetBool(FlagPageReverse)
+}
+
+// SetFlagPageCountTotal sets the flag for the count total field in the given command.
+func SetFlagPageCountTotal(cmd *cobra.Command) {
+	value := cast.ToBool(GetDefault(NamePageCountTotal))
+	cmd.Flags().Bool(FlagPageCountTotal, value, "Include total count in paged queries.")
+}
+
+// SetFlagPageKey sets the flag for the base64-encoded key in the given command.
+func SetFlagPageKey(cmd *cobra.Command) {
+	value := cast.ToString(GetDefault(NamePageKey))
+	cmd.Flags().String(FlagPageKey, value, "Base64-encoded key for page.")
+}
+
+// SetFlagPageLimit sets the flag for the results per page limit in the given command.
+func SetFlagPageLimit(cmd *cobra.Command) {
+	value := cast.ToUint64(GetDefault(NamePageLimit))
+	cmd.Flags().Uint64(FlagPageLimit, value, "Maximum number of results per page.")
+}
+
+// SetFlagPageOffset sets the flag for the page offset in the given command.
+func SetFlagPageOffset(cmd *cobra.Command) {
+	value := cast.ToUint64(GetDefault(NamePageOffset))
+	cmd.Flags().Uint64(FlagPageOffset, value, "Offset for the page.")
+}
+
+// SetFlagPageReverse sets the flag for the reverse order in the given command.
+func SetFlagPageReverse(cmd *cobra.Command) {
+	value := cast.ToBool(GetDefault(NamePageReverse))
+	cmd.Flags().Bool(FlagPageReverse, value, "Reverse the order of results in the page.")
+}
+
+// SetPageFlags sets all page-related flags for the command.
+func SetPageFlags(cmd *cobra.Command) {
+	SetFlagPageCountTotal(cmd)
+	SetFlagPageKey(cmd)
+	SetFlagPageLimit(cmd)
+	SetFlagPageOffset(cmd)
+	SetFlagPageReverse(cmd)
+}
+
+// NewPageFromCmd creates a new Page object from the command-line flags.
 func NewPageFromCmd(cmd *cobra.Command) (*Page, error) {
-	// Retrieve the value of the "page.count-total" flag.
-	countTotal, err := flags.GetPageCountTotal(cmd)
+	// Retrieve count total from the command flags
+	countTotal, err := GetPageCountTotalFromCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Retrieve the value of the "page.key" flag.
-	key, err := flags.GetPageKey(cmd)
+	// Retrieve key from the command flags
+	key, err := GetPageKeyFromCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Retrieve the value of the "page.limit" flag.
-	limit, err := flags.GetPageLimit(cmd)
+	// Retrieve limit from the command flags
+	limit, err := GetPageLimitFromCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Retrieve the value of the "page.offset" flag.
-	offset, err := flags.GetPageOffset(cmd)
+	// Retrieve offset from the command flags
+	offset, err := GetPageOffsetFromCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Retrieve the value of the "page.reverse" flag.
-	reverse, err := flags.GetPageReverse(cmd)
+	// Retrieve reverse from the command flags
+	reverse, err := GetPageReverseFromCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Return a new Page instance populated with the retrieved flag values.
+	// Return a new Page object with the retrieved values
 	return &Page{
 		CountTotal: countTotal,
 		Key:        key,

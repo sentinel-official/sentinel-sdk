@@ -11,7 +11,7 @@ import (
 
 	"github.com/sentinel-official/sentinel-go-sdk/client"
 	"github.com/sentinel-official/sentinel-go-sdk/client/input"
-	"github.com/sentinel-official/sentinel-go-sdk/flags"
+	"github.com/sentinel-official/sentinel-go-sdk/options"
 )
 
 // KeysCmd returns a new Cobra command for key management sub-commands.
@@ -46,7 +46,7 @@ func keysAdd() *cobra.Command {
 				return err
 			}
 
-			outputFormat, err := flags.GetOutputFormat(cmd)
+			outputFormat, err := options.GetOutputFormatFromCmd(cmd)
 			if err != nil {
 				return err
 			}
@@ -115,9 +115,9 @@ func keysAdd() *cobra.Command {
 		},
 	}
 
-	flags.AddKeyFlags(cmd)
-	flags.AddKeyringFlags(cmd)
-	flags.SetFlagOutputFormat(cmd)
+	options.SetKeyFlags(cmd)
+	options.SetKeyringFlags(cmd)
+	options.SetFlagOutputFormat(cmd)
 
 	return cmd
 }
@@ -157,7 +157,7 @@ func keysDelete() *cobra.Command {
 		},
 	}
 
-	flags.AddKeyringFlags(cmd)
+	options.SetKeyringFlags(cmd)
 
 	return cmd
 }
@@ -173,7 +173,7 @@ func keysList() *cobra.Command {
 				return err
 			}
 
-			outputFormat, err := flags.GetOutputFormat(cmd)
+			outputFormat, err := options.GetOutputFormatFromCmd(cmd)
 			if err != nil {
 				return err
 			}
@@ -201,8 +201,8 @@ func keysList() *cobra.Command {
 		},
 	}
 
-	flags.AddKeyringFlags(cmd)
-	flags.SetFlagOutputFormat(cmd)
+	options.SetKeyringFlags(cmd)
+	options.SetFlagOutputFormat(cmd)
 
 	return cmd
 }
@@ -219,7 +219,7 @@ func keysShow() *cobra.Command {
 				return err
 			}
 
-			outputFormat, err := flags.GetOutputFormat(cmd)
+			outputFormat, err := options.GetOutputFormatFromCmd(cmd)
 			if err != nil {
 				return err
 			}
@@ -247,8 +247,8 @@ func keysShow() *cobra.Command {
 		},
 	}
 
-	flags.AddKeyringFlags(cmd)
-	flags.SetFlagOutputFormat(cmd)
+	options.SetKeyringFlags(cmd)
+	options.SetFlagOutputFormat(cmd)
 
 	return cmd
 }

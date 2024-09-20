@@ -8,13 +8,53 @@ import (
 
 	"github.com/cometbft/cometbft/rpc/client"
 	"github.com/cometbft/cometbft/rpc/client/http"
+	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 
-	"github.com/sentinel-official/sentinel-go-sdk/flags"
 	"github.com/sentinel-official/sentinel-go-sdk/utils"
 )
 
-// Query represents options for making queries.
+// Constants for the Query struct fields.
+const (
+	NameQueryHeight     = "QueryHeight"
+	NameQueryMaxRetries = "QueryMaxRetries"
+	NameQueryProve      = "QueryProve"
+	NameQueryRetryDelay = "QueryRetryDelay"
+	NameQueryRPCAddr    = "QueryRPCAddr"
+	NameQueryTimeout    = "QueryTimeout"
+)
+
+// Default values for the Query fields.
+const (
+	DefaultQueryHeight     = 0
+	DefaultQueryMaxRetries = 5
+	DefaultQueryProve      = false
+	DefaultQueryRetryDelay = "1s"
+	DefaultQueryRPCAddr    = "https://rpc.sentinel.co:443"
+	DefaultQueryTimeout    = "10s"
+)
+
+// Flags for command-line options for Query.
+const (
+	FlagQueryHeight     = "query.height"
+	FlagQueryMaxRetries = "query.max-retries"
+	FlagQueryProve      = "query.prove"
+	FlagQueryRetryDelay = "query.retry-delay"
+	FlagQueryRPCAddr    = "query.rpc-addr"
+	FlagQueryTimeout    = "query.timeout"
+)
+
+// init function sets the default values for query-related parameters at package initialization.
+func init() {
+	SetDefault(NameQueryHeight, DefaultQueryHeight)
+	SetDefault(NameQueryMaxRetries, DefaultQueryMaxRetries)
+	SetDefault(NameQueryProve, DefaultQueryProve)
+	SetDefault(NameQueryRetryDelay, DefaultQueryRetryDelay)
+	SetDefault(NameQueryRPCAddr, DefaultQueryRPCAddr)
+	SetDefault(NameQueryTimeout, DefaultQueryTimeout)
+}
+
+// Query defines a structure for holding query-related parameters.
 type Query struct {
 	Height     int64  `json:"height" toml:"height"`           // Height is the block height at which the query is to be performed.
 	MaxRetries int    `json:"max_retries" toml:"max_retries"` // MaxRetries is the maximum number of retries for the query.
@@ -27,12 +67,12 @@ type Query struct {
 // NewQuery creates a new Query instance with default values.
 func NewQuery() *Query {
 	return &Query{
-		Height:     flags.DefaultQueryHeight,
-		MaxRetries: flags.DefaultQueryMaxRetries,
-		Prove:      flags.DefaultQueryProve,
-		RetryDelay: flags.DefaultQueryRetryDelay,
-		RPCAddr:    flags.DefaultQueryRPCAddr,
-		Timeout:    flags.DefaultQueryTimeout,
+		Height:     cast.ToInt64(GetDefault(NameQueryHeight)),
+		MaxRetries: cast.ToInt(GetDefault(NameQueryMaxRetries)),
+		Prove:      cast.ToBool(GetDefault(NameQueryProve)),
+		RetryDelay: cast.ToString(GetDefault(NameQueryRetryDelay)),
+		RPCAddr:    cast.ToString(GetDefault(NameQueryRPCAddr)),
+		Timeout:    cast.ToString(GetDefault(NameQueryTimeout)),
 	}
 }
 
@@ -222,45 +262,121 @@ func (q *Query) Client() (*http.HTTP, error) {
 	return http.NewWithTimeout(q.GetRPCAddr(), "/websocket", timeout)
 }
 
-// NewQueryFromCmd creates and returns Query from the given cobra command's flags.
+// GetQueryHeightFromCmd retrieves the block height from the command-line flags.
+func GetQueryHeightFromCmd(cmd *cobra.Command) (int64, error) {
+	return cmd.Flags().GetInt64(FlagQueryHeight)
+}
+
+// GetQueryMaxRetriesFromCmd retrieves the maximum number of retries from the command-line flags.
+func GetQueryMaxRetriesFromCmd(cmd *cobra.Command) (int, error) {
+	return cmd.Flags().GetInt(FlagQueryMaxRetries)
+}
+
+// GetQueryProveFromCmd retrieves whether to include proof from the command-line flags.
+func GetQueryProveFromCmd(cmd *cobra.Command) (bool, error) {
+	return cmd.Flags().GetBool(FlagQueryProve)
+}
+
+// GetQueryRetryDelayFromCmd retrieves the retry delay from the command-line flags.
+func GetQueryRetryDelayFromCmd(cmd *cobra.Command) (string, error) {
+	return cmd.Flags().GetString(FlagQueryRetryDelay)
+}
+
+// GetQueryRPCAddrFromCmd retrieves the RPC server address from the command-line flags.
+func GetQueryRPCAddrFromCmd(cmd *cobra.Command) (string, error) {
+	return cmd.Flags().GetString(FlagQueryRPCAddr)
+}
+
+// GetQueryTimeoutFromCmd retrieves the query timeout from the command-line flags.
+func GetQueryTimeoutFromCmd(cmd *cobra.Command) (string, error) {
+	return cmd.Flags().GetString(FlagQueryTimeout)
+}
+
+// SetFlagQueryHeight sets the flag for the block height in the given command.
+func SetFlagQueryHeight(cmd *cobra.Command) {
+	value := cast.ToInt64(GetDefault(NameQueryHeight))
+	cmd.Flags().Int64(FlagQueryHeight, value, "Block height at which the query is to be performed.")
+}
+
+// SetFlagQueryMaxRetries sets the flag for the maximum number of retries in the given command.
+func SetFlagQueryMaxRetries(cmd *cobra.Command) {
+	value := cast.ToInt(GetDefault(NameQueryMaxRetries))
+	cmd.Flags().Int(FlagQueryMaxRetries, value, "Maximum number of retries for the query.")
+}
+
+// SetFlagQueryProve sets the flag for including proof in the query results in the given command.
+func SetFlagQueryProve(cmd *cobra.Command) {
+	value := cast.ToBool(GetDefault(NameQueryProve))
+	cmd.Flags().Bool(FlagQueryProve, value, "Include proof in query results.")
+}
+
+// SetFlagQueryRetryDelay sets the flag for the delay between retries in the given command.
+func SetFlagQueryRetryDelay(cmd *cobra.Command) {
+	value := cast.ToString(GetDefault(NameQueryRetryDelay))
+	cmd.Flags().String(FlagQueryRetryDelay, value, "Delay between retries for the query.")
+}
+
+// SetFlagQueryRPCAddr sets the flag for the RPC server address in the given command.
+func SetFlagQueryRPCAddr(cmd *cobra.Command) {
+	value := cast.ToString(GetDefault(NameQueryRPCAddr))
+	cmd.Flags().String(FlagQueryRPCAddr, value, "Address of the RPC server.")
+}
+
+// SetFlagQueryTimeout sets the flag for the query timeout in the given command.
+func SetFlagQueryTimeout(cmd *cobra.Command) {
+	value := cast.ToString(GetDefault(NameQueryTimeout))
+	cmd.Flags().String(FlagQueryTimeout, value, "Maximum duration for the query to be executed.")
+}
+
+// SetQueryFlags sets all query-related flags for the command.
+func SetQueryFlags(cmd *cobra.Command) {
+	SetFlagQueryHeight(cmd)
+	SetFlagQueryMaxRetries(cmd)
+	SetFlagQueryProve(cmd)
+	SetFlagQueryRetryDelay(cmd)
+	SetFlagQueryRPCAddr(cmd)
+	SetFlagQueryTimeout(cmd)
+}
+
+// NewQueryFromCmd creates a new Query object from the command-line flags.
 func NewQueryFromCmd(cmd *cobra.Command) (*Query, error) {
-	// Retrieve the height flag value from the command.
-	height, err := flags.GetQueryHeight(cmd)
+	// Retrieve block height from the command flags
+	height, err := GetQueryHeightFromCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Retrieve the max retries flag value from the command.
-	maxRetries, err := flags.GetQueryMaxRetries(cmd)
+	// Retrieve maximum number of retries from the command flags
+	maxRetries, err := GetQueryMaxRetriesFromCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Retrieve the prove flag value from the command.
-	prove, err := flags.GetQueryProve(cmd)
+	// Retrieve whether to include proof from the command flags
+	prove, err := GetQueryProveFromCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Retrieve the retry delay flag value from the command.
-	retryDelay, err := flags.GetQueryRetryDelay(cmd)
+	// Retrieve retry delay from the command flags
+	retryDelay, err := GetQueryRetryDelayFromCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Retrieve the RPC address flag value from the command.
-	rpcAddr, err := flags.GetQueryRPCAddr(cmd)
+	// Retrieve RPC server address from the command flags
+	rpcAddr, err := GetQueryRPCAddrFromCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Retrieve the timeout flag value from the command.
-	timeout, err := flags.GetQueryTimeout(cmd)
+	// Retrieve query timeout from the command flags
+	timeout, err := GetQueryTimeoutFromCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Return a new Query instance populated with the retrieved flag values.
+	// Return a new Query object with the retrieved values
 	return &Query{
 		Height:     height,
 		MaxRetries: maxRetries,
