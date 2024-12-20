@@ -3,81 +3,71 @@ package client
 import (
 	"context"
 
+	"github.com/cosmos/cosmos-sdk/types/query"
 	base "github.com/sentinel-official/hub/v12/types"
 	v1base "github.com/sentinel-official/hub/v12/types/v1"
-	"github.com/sentinel-official/hub/v12/x/node/types/v2"
+	"github.com/sentinel-official/hub/v12/x/node/types/v3"
 )
 
 const (
 	// gRPC methods for querying node information
-	methodQueryNode         = "/sentinel.node.v2.QueryService/QueryNode"
-	methodQueryNodes        = "/sentinel.node.v2.QueryService/QueryNodes"
-	methodQueryNodesForPlan = "/sentinel.node.v2.QueryService/QueryNodesForPlan"
+	methodQueryNode         = "/sentinel.node.v3.QueryService/QueryNode"         // Retrieve details of a specific node
+	methodQueryNodes        = "/sentinel.node.v3.QueryService/QueryNodes"        // Retrieve a list of nodes with optional filtering
+	methodQueryNodesForPlan = "/sentinel.node.v3.QueryService/QueryNodesForPlan" // Retrieve nodes associated with a specific plan
 )
 
-// Node queries and returns information about a specific node based on the provided node address.
-// It uses gRPC to send a request to the "/sentinel.node.v2.QueryService/QueryNode" endpoint.
-// The result is a pointer to v2.Node and an error if the query fails.
-func (c *Client) Node(ctx context.Context, nodeAddr base.NodeAddress, opts *Options) (res *v2.Node, err error) {
-	// Initialize variables for the query.
+// Node retrieves details of a specific node by its address.
+// Returns the node details and any error encountered.
+func (c *Client) Node(ctx context.Context, nodeAddr base.NodeAddress) (res *v3.Node, err error) {
 	var (
-		resp v2.QueryNodeResponse
-		req  = &v2.QueryNodeRequest{
-			Address: nodeAddr.String(),
-		}
+		resp v3.QueryNodeResponse
+		req  = &v3.QueryNodeRequest{Address: nodeAddr.String()}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQueryNode, req, &resp, opts); err != nil {
+	// Perform the gRPC query to fetch the node details.
+	if err := c.QueryGRPC(ctx, methodQueryNode, req, &resp); err != nil {
 		return nil, err
 	}
 
-	// Return a pointer to the node and a nil error.
 	return &resp.Node, nil
 }
 
-// Nodes queries and returns a list of nodes based on the provided status and options.
-// It uses gRPC to send a request to the "/sentinel.node.v2.QueryService/QueryNodes" endpoint.
-// The result is a slice of v2.Node and an error if the query fails.
-func (c *Client) Nodes(ctx context.Context, status v1base.Status, opts *Options) (res []v2.Node, err error) {
-	// Initialize variables for the query.
+// Nodes retrieves a paginated list of nodes filtered by their status.
+// Returns the nodes, pagination details, and any error encountered.
+func (c *Client) Nodes(ctx context.Context, status v1base.Status, pageReq *query.PageRequest) (res []v3.Node, pageRes *query.PageResponse, err error) {
 	var (
-		resp v2.QueryNodesResponse
-		req  = &v2.QueryNodesRequest{
+		resp v3.QueryNodesResponse
+		req  = &v3.QueryNodesRequest{
 			Status:     status,
-			Pagination: opts.PageRequest(),
+			Pagination: pageReq,
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQueryNodes, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch the nodes.
+	if err := c.QueryGRPC(ctx, methodQueryNodes, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Return the list of nodes and a nil error.
-	return resp.Nodes, nil
+	return resp.Nodes, resp.Pagination, nil
 }
 
-// NodesForPlan queries and returns a list of nodes associated with a specific plan
-// based on the provided plan ID, status, and options.
-// It uses gRPC to send a request to the "/sentinel.node.v2.QueryService/QueryNodesForPlan" endpoint.
-// The result is a slice of v2.Node and an error if the query fails.
-func (c *Client) NodesForPlan(ctx context.Context, id uint64, status v1base.Status, opts *Options) (res []v2.Node, err error) {
-	// Initialize variables for the query.
+// NodesForPlan retrieves a list of nodes associated with a specific plan ID.
+// Filters results by status and supports pagination.
+// Returns the nodes, pagination details, and any error encountered.
+func (c *Client) NodesForPlan(ctx context.Context, id uint64, status v1base.Status, pageReq *query.PageRequest) (res []v3.Node, pageRes *query.PageResponse, err error) {
 	var (
-		resp v2.QueryNodesForPlanResponse
-		req  = &v2.QueryNodesForPlanRequest{
+		resp v3.QueryNodesForPlanResponse
+		req  = &v3.QueryNodesForPlanRequest{
 			Id:         id,
 			Status:     status,
-			Pagination: opts.PageRequest(),
+			Pagination: pageReq,
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQueryNodesForPlan, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch nodes for the given plan.
+	if err := c.QueryGRPC(ctx, methodQueryNodesForPlan, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Return the list of nodes and a nil error.
-	return resp.Nodes, nil
+	return resp.Nodes, resp.Pagination, nil
 }

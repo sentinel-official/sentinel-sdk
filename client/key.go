@@ -1,65 +1,38 @@
 package client
 
 import (
+	cryptohd "github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/go-bip39"
 )
 
-// Key retrieves key information from the keyring based on the provided name and options.
-// It initializes a keyring using the provided options and returns the key information.
-func (c *Client) Key(name string, opts *Options) (*keyring.Record, error) {
-	// Initialize a keyring based on the provided options.
-	kr, err := c.Keyring(opts)
-	if err != nil {
-		return nil, err
-	}
-
-	// Retrieve key information from the keyring.
-	return kr.Key(name)
+// Key retrieves key information from the keyring based on the provided name.
+// Returns the key record or an error if the key cannot be found.
+func (c *Client) Key(name string) (*keyring.Record, error) {
+	return c.keyring.Key(name)
 }
 
-// Sign signs the provided data using the key from the keyring specified by the name and options.
-// It initializes a keyring, retrieves the key, and signs the data.
-func (c *Client) Sign(name string, buf []byte, opts *Options) ([]byte, cryptotypes.PubKey, error) {
-	// Initialize a keyring based on the provided options.
-	kr, err := c.Keyring(opts)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Sign the provided data using the key from the keyring.
-	return kr.Sign(name, buf)
+// Sign signs the provided data using the key from the keyring identified by the given name.
+// Returns the signed bytes, the public key, and any error encountered.
+func (c *Client) Sign(name string, buf []byte) ([]byte, cryptotypes.PubKey, error) {
+	return c.keyring.Sign(name, buf)
 }
 
-// Keys retrieves a list of all keys from the keyring based on the provided options.
-// It initializes a keyring and returns a list of key records.
-func (c *Client) Keys(opts *Options) ([]*keyring.Record, error) {
-	// Initialize a keyring based on the provided options.
-	kr, err := c.Keyring(opts)
-	if err != nil {
-		return nil, err
-	}
-
-	// Retrieve and return the list of key records.
-	return kr.List()
+// Keys retrieves a list of all keys from the keyring.
+// Returns the list of key records or an error if the operation fails.
+func (c *Client) Keys() ([]*keyring.Record, error) {
+	return c.keyring.List()
 }
 
-// DeleteKey deletes the key from the keyring based on the provided name and options.
-// It initializes a keyring and removes the key specified by the name.
-func (c *Client) DeleteKey(name string, opts *Options) error {
-	// Initialize a keyring based on the provided options.
-	kr, err := c.Keyring(opts)
-	if err != nil {
-		return err
-	}
-
-	// Delete the key from the keyring.
-	return kr.Delete(name)
+// DeleteKey removes a key from the keyring based on the provided name.
+// Returns an error if the key cannot be deleted.
+func (c *Client) DeleteKey(name string) error {
+	return c.keyring.Delete(name)
 }
 
 // NewMnemonic generates a new mnemonic phrase using bip39 with 256 bits of entropy.
-// It returns the generated mnemonic or an error if one occurs.
+// Returns the mnemonic or an error if the operation fails.
 func (c *Client) NewMnemonic() (string, error) {
 	// Generate new entropy for the mnemonic.
 	entropy, err := bip39.NewEntropy(256)
@@ -76,15 +49,10 @@ func (c *Client) NewMnemonic() (string, error) {
 	return mnemonic, nil
 }
 
-// CreateKey creates a new key in the keyring with the provided name, mnemonic, and bip39 passphrase.
-// If mnemonic is empty, a new mnemonic is generated. It returns the mnemonic, the created key record, or an error.
-func (c *Client) CreateKey(name, mnemonic, bip39Pass string, opts *Options) (string, *keyring.Record, error) {
-	// Initialize a keyring based on the provided options.
-	kr, err := c.Keyring(opts)
-	if err != nil {
-		return "", nil, err
-	}
-
+// CreateKey generates and stores a new key in the keyring with the provided name, mnemonic, and options.
+// If no mnemonic is provided, it generates a new one.
+// Returns the mnemonic, the created key record, and any error encountered.
+func (c *Client) CreateKey(name, mnemonic, bip39Pass string, coinType, account, index uint32) (s string, k *keyring.Record, err error) {
 	// Generate a new mnemonic if none is provided.
 	if mnemonic == "" {
 		mnemonic, err = c.NewMnemonic()
@@ -93,8 +61,12 @@ func (c *Client) CreateKey(name, mnemonic, bip39Pass string, opts *Options) (str
 		}
 	}
 
-	// Create a new key with the provided or newly generated mnemonic.
-	key, err := kr.NewAccount(name, mnemonic, bip39Pass, opts.HDPath(), opts.SignatureAlgo())
+	// Create an HD path for the key.
+	hdPath := cryptohd.CreateHDPath(coinType, account, index)
+	signAlgo := cryptohd.Secp256k1
+
+	// Create a new key in the keyring.
+	key, err := c.keyring.NewAccount(name, mnemonic, bip39Pass, hdPath.String(), signAlgo)
 	if err != nil {
 		return "", nil, err
 	}

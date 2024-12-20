@@ -40,7 +40,7 @@ func writeOutput(w io.Writer, v interface{}, format string) error {
 	case keys.OutputFormatText:
 		return writeOutputText(w, v)
 	default:
-		return fmt.Errorf("invalid output format: %s", format)
+		return fmt.Errorf("invalid output format %s", format)
 	}
 }
 

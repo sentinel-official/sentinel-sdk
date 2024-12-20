@@ -4,115 +4,94 @@ import (
 	"context"
 
 	cosmossdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/sentinel-official/hub/v12/x/subscription/types/v2"
 	"github.com/sentinel-official/hub/v12/x/subscription/types/v3"
 )
 
 const (
-	// gRPC methods for querying subscription information
-	methodQuerySubscription            = "/sentinel.subscription.v2.QueryService/QuerySubscription"
-	methodQuerySubscriptions           = "/sentinel.subscription.v2.QueryService/QuerySubscriptions"
-	methodQuerySubscriptionsForAccount = "/sentinel.subscription.v2.QueryService/QuerySubscriptionsForAccount"
-	methodQuerySubscriptionsForPlan    = "/sentinel.subscription.v2.QueryService/QuerySubscriptionsForPlan"
-
-	// gRPC methods for querying subscription allocation information
-	methodQuerySubscriptionAllocation  = "/sentinel.subscription.v2.QueryService/QueryAllocation"
-	methodQuerySubscriptionAllocations = "/sentinel.subscription.v2.QueryService/QueryAllocations"
+	// gRPC methods for querying subscription and allocation information
+	methodQuerySubscription            = "/sentinel.subscription.v3.QueryService/QuerySubscription"            // Fetch details of a specific subscription
+	methodQuerySubscriptions           = "/sentinel.subscription.v3.QueryService/QuerySubscriptions"           // Fetch a list of all subscriptions
+	methodQuerySubscriptionsForAccount = "/sentinel.subscription.v3.QueryService/QuerySubscriptionsForAccount" // Fetch subscriptions associated with an account
+	methodQuerySubscriptionsForPlan    = "/sentinel.subscription.v3.QueryService/QuerySubscriptionsForPlan"    // Fetch subscriptions associated with a specific plan
+	methodQuerySubscriptionAllocation  = "/sentinel.subscription.v2.QueryService/QueryAllocation"              // Fetch details of a specific allocation within a subscription
+	methodQuerySubscriptionAllocations = "/sentinel.subscription.v2.QueryService/QueryAllocations"             // Fetch a list of allocations within a subscription
 )
 
-// Subscription queries and returns information about a specific subscription based on the provided subscription ID.
-// It uses gRPC to send a request to the "/sentinel.subscription.v3.QueryService/QuerySubscription" endpoint.
-// The result is a v3.Subscription and an error if the query fails.
-func (c *Client) Subscription(ctx context.Context, id uint64, opts *Options) (res *v3.Subscription, err error) {
-	// Initialize variables for the query.
+// Subscription retrieves details of a specific subscription by its ID.
+// Returns the subscription details and any error encountered.
+func (c *Client) Subscription(ctx context.Context, id uint64) (res *v3.Subscription, err error) {
 	var (
 		resp v3.QuerySubscriptionResponse
-		req  = &v3.QuerySubscriptionRequest{
-			Id: id,
-		}
+		req  = &v3.QuerySubscriptionRequest{Id: id}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySubscription, req, &resp, opts); err != nil {
+	// Perform the gRPC query to fetch the subscription details.
+	if err := c.QueryGRPC(ctx, methodQuerySubscription, req, &resp); err != nil {
 		return nil, err
 	}
 
-	// Return a pointer to the subscription and a nil error.
 	return &resp.Subscription, nil
 }
 
-// Subscriptions queries and returns a list of subscriptions based on the provided options.
-// It uses gRPC to send a request to the "/sentinel.subscription.v3.QueryService/QuerySubscriptions" endpoint.
-// The result is a slice of v3.Subscription and an error if the query fails.
-func (c *Client) Subscriptions(ctx context.Context, opts *Options) (res []v3.Subscription, err error) {
-	// Initialize variables for the query.
+// Subscriptions retrieves a paginated list of all subscriptions.
+// Returns the subscriptions, pagination details, and any error encountered.
+func (c *Client) Subscriptions(ctx context.Context, pageReq *query.PageRequest) (res []v3.Subscription, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QuerySubscriptionsResponse
-		req  = &v3.QuerySubscriptionsRequest{
-			Pagination: opts.PageRequest(),
-		}
+		req  = &v3.QuerySubscriptionsRequest{Pagination: pageReq}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySubscriptions, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch the subscriptions.
+	if err := c.QueryGRPC(ctx, methodQuerySubscriptions, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Return the list of subscriptions and a nil error.
-	return resp.Subscriptions, nil
+	return resp.Subscriptions, resp.Pagination, nil
 }
 
-// SubscriptionsForAccount queries and returns a list of subscriptions associated with a specific account.
-// It uses gRPC to send a request to the "/sentinel.subscription.v3.QueryService/QuerySubscriptionsForAccount" endpoint.
-// The result is a slice of v3.Subscription and an error if the query fails.
-// The account is identified by the provided cosmossdk.AccAddress.
-func (c *Client) SubscriptionsForAccount(ctx context.Context, accAddr cosmossdk.AccAddress, opts *Options) (res []v3.Subscription, err error) {
-	// Initialize variables for the query.
+// SubscriptionsForAccount retrieves subscriptions associated with a specific account.
+// Returns the subscriptions, pagination details, and any error encountered.
+func (c *Client) SubscriptionsForAccount(ctx context.Context, accAddr cosmossdk.AccAddress, pageReq *query.PageRequest) (res []v3.Subscription, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QuerySubscriptionsForAccountResponse
 		req  = &v3.QuerySubscriptionsForAccountRequest{
 			Address:    accAddr.String(),
-			Pagination: opts.PageRequest(),
+			Pagination: pageReq,
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySubscriptionsForAccount, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch subscriptions for the given account.
+	if err := c.QueryGRPC(ctx, methodQuerySubscriptionsForAccount, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Return the list of subscriptions and a nil error.
-	return resp.Subscriptions, nil
+	return resp.Subscriptions, resp.Pagination, nil
 }
 
-// SubscriptionsForPlan queries and returns a list of subscriptions associated with a specific plan.
-// It uses gRPC to send a request to the "/sentinel.subscription.v3.QueryService/QuerySubscriptionsForPlan" endpoint.
-// The result is a slice of v3.Subscription and an error if the query fails.
-// The plan is identified by the provided ID.
-func (c *Client) SubscriptionsForPlan(ctx context.Context, id uint64, opts *Options) (res []v3.Subscription, err error) {
-	// Initialize variables for the query.
+// SubscriptionsForPlan retrieves subscriptions associated with a specific plan.
+// Returns the subscriptions, pagination details, and any error encountered.
+func (c *Client) SubscriptionsForPlan(ctx context.Context, id uint64, pageReq *query.PageRequest) (res []v3.Subscription, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QuerySubscriptionsForPlanResponse
 		req  = &v3.QuerySubscriptionsForPlanRequest{
 			Id:         id,
-			Pagination: opts.PageRequest(),
+			Pagination: pageReq,
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySubscriptionsForPlan, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch subscriptions for the given plan.
+	if err := c.QueryGRPC(ctx, methodQuerySubscriptionsForPlan, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Return the list of subscriptions and a nil error.
-	return resp.Subscriptions, nil
+	return resp.Subscriptions, resp.Pagination, nil
 }
 
-// SubscriptionAllocation queries and returns information about a specific allocation within a subscription.
-// It uses gRPC to send a request to the "/sentinel.subscription.v2.QueryService/QueryAllocation" endpoint.
-// The result is a pointer to v2.Allocation and an error if the query fails.
-func (c *Client) SubscriptionAllocation(ctx context.Context, id uint64, accAddr cosmossdk.AccAddress, opts *Options) (res *v2.Allocation, err error) {
-	// Initialize variables for the query.
+// SubscriptionAllocation retrieves details of a specific allocation within a subscription.
+// Returns the allocation details and any error encountered.
+func (c *Client) SubscriptionAllocation(ctx context.Context, id uint64, accAddr cosmossdk.AccAddress) (res *v2.Allocation, err error) {
 	var (
 		resp v2.QueryAllocationResponse
 		req  = &v2.QueryAllocationRequest{
@@ -121,33 +100,29 @@ func (c *Client) SubscriptionAllocation(ctx context.Context, id uint64, accAddr 
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySubscriptionAllocation, req, &resp, opts); err != nil {
+	// Perform the gRPC query to fetch the allocation details.
+	if err := c.QueryGRPC(ctx, methodQuerySubscriptionAllocation, req, &resp); err != nil {
 		return nil, err
 	}
 
-	// Return a pointer to the allocation and a nil error.
 	return &resp.Allocation, nil
 }
 
-// SubscriptionAllocations queries and returns a list of allocations within a specific subscription.
-// It uses gRPC to send a request to the "/sentinel.subscription.v2.QueryService/QueryAllocations" endpoint.
-// The result is a slice of v2.Allocation and an error if the query fails.
-func (c *Client) SubscriptionAllocations(ctx context.Context, id uint64, opts *Options) (res []v2.Allocation, err error) {
-	// Initialize variables for the query.
+// SubscriptionAllocations retrieves a paginated list of allocations within a specific subscription.
+// Returns the allocations, pagination details, and any error encountered.
+func (c *Client) SubscriptionAllocations(ctx context.Context, id uint64, pageReq *query.PageRequest) (res []v2.Allocation, pageRes *query.PageResponse, err error) {
 	var (
 		resp v2.QueryAllocationsResponse
 		req  = &v2.QueryAllocationsRequest{
 			Id:         id,
-			Pagination: opts.PageRequest(),
+			Pagination: pageReq,
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySubscriptionAllocations, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch the allocations.
+	if err := c.QueryGRPC(ctx, methodQuerySubscriptionAllocations, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Return the list of allocations and a nil error.
-	return resp.Allocations, nil
+	return resp.Allocations, resp.Pagination, nil
 }

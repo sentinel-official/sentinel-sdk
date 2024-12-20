@@ -4,68 +4,57 @@ import (
 	"context"
 
 	cosmossdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 
 const (
 	// gRPC methods for querying account information
-	methodQueryAccount  = "/cosmos.auth.v1beta1.Query/Account"
-	methodQueryAccounts = "/cosmos.auth.v1beta1.Query/Accounts"
+	methodQueryAccount  = "/cosmos.auth.v1beta1.Query/Account"  // Endpoint for retrieving a single account
+	methodQueryAccounts = "/cosmos.auth.v1beta1.Query/Accounts" // Endpoint for listing accounts with pagination
 )
 
-// Account queries and returns an account using the given address and options.
-// It uses gRPC to send a request to the "/cosmos.auth.v1beta1.Query/Account" endpoint.
-// The result is an authtypes.AccountI interface and an error if the query fails.
-func (c *Client) Account(ctx context.Context, accAddr cosmossdk.AccAddress, opts *Options) (res authtypes.AccountI, err error) {
-	// Initialize variables for the query.
+// Account retrieves an account by its address using a gRPC query.
+// Returns the account interface and any potential error encountered.
+func (c *Client) Account(ctx context.Context, accAddr cosmossdk.AccAddress) (res authtypes.AccountI, err error) {
 	var (
 		resp authtypes.QueryAccountResponse
-		req  = &authtypes.QueryAccountRequest{
-			Address: accAddr.String(),
-		}
+		req  = &authtypes.QueryAccountRequest{Address: accAddr.String()}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQueryAccount, req, &resp, opts); err != nil {
+	// Perform the gRPC query to fetch the account details.
+	if err := c.QueryGRPC(ctx, methodQueryAccount, req, &resp); err != nil {
 		return nil, err
 	}
 
-	// Unpack the Any type account from the response.
+	// Unpack the retrieved account data into the account interface.
 	if err := c.UnpackAny(resp.Account, &res); err != nil {
 		return nil, err
 	}
 
-	// Return the account and a nil error.
 	return res, nil
 }
 
-// Accounts queries and returns a list of accounts using the given options.
-// It uses gRPC to send a request to the "/cosmos.auth.v1beta1.Query/Accounts" endpoint.
-// The result is a slice of authtypes.AccountI and an error if the query fails.
-func (c *Client) Accounts(ctx context.Context, opts *Options) (res []authtypes.AccountI, err error) {
-	// Initialize variables for the query.
+// Accounts retrieves a list of accounts with pagination support using a gRPC query.
+// Returns a slice of account interfaces, pagination details, and any potential error.
+func (c *Client) Accounts(ctx context.Context, pageReq *query.PageRequest) (res []authtypes.AccountI, pageRes *query.PageResponse, err error) {
 	var (
 		resp authtypes.QueryAccountsResponse
-		req  = &authtypes.QueryAccountsRequest{
-			Pagination: opts.PageRequest(),
-		}
+		req  = &authtypes.QueryAccountsRequest{Pagination: pageReq}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQueryAccounts, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch paginated account details.
+	if err := c.QueryGRPC(ctx, methodQueryAccounts, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Initialize a slice to store the accounts.
+	// Allocate memory for account slice and unpack each account record.
 	res = make([]authtypes.AccountI, len(resp.Accounts))
-
-	// Unpack each Any type account from the response and add it to the result slice.
 	for i := 0; i < len(resp.Accounts); i++ {
 		if err := c.UnpackAny(resp.Accounts[i], &res[i]); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	// Return the list of accounts and a nil error.
-	return res, nil
+	return res, resp.Pagination, nil
 }

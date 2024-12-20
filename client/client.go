@@ -1,26 +1,49 @@
 package client
 
 import (
-	"sync"
+	"time"
 
+	"cosmossdk.io/log"
+	"github.com/cometbft/cometbft/rpc/client/http"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	cosmossdk "github.com/cosmos/cosmos-sdk/types"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-
-	"github.com/sentinel-official/sentinel-go-sdk/types"
 )
 
-// Client contains necessary components for transaction handling, encoding, and decoding.
+// contextKey is a custom type used as a key to store the Client struct in a context.
+type contextKey byte
+
+// ContextKey is the constant key value used for storing and retrieving the Client struct from a context.
+const ContextKey contextKey = 0
+
+// Client contains all necessary components for transaction handling, query management, and configuration settings.
 type Client struct {
-	sync.Mutex                                // Mutex to ensure thread-safe access
-	codec.ProtoCodecMarshaler                 // Marshaler for protobuf types
-	client.TxConfig                           // Configuration for transactions
-	kr                        keyring.Keyring // Keyring for managing keys
+	codec.ProtoCodecMarshaler // Used for marshaling and unmarshaling protobuf data
+	client.TxConfig           // Configuration related to transactions (e.g., signing modes)
+	chainID                   string
+	keyring                   keyring.Keyring
+	logger                    log.Logger
+	queryHeight               int64                // Query height for blockchain data
+	queryMaxRetries           int                  // Maximum number of retries for queries
+	queryProve                bool                 // Flag indicating whether to prove queries
+	queryRetryDelay           time.Duration        // Delay between query retries
+	rpcAddr                   string               // RPC server address
+	rpcTimeout                time.Duration        // RPC timeout duration
+	txFeeGranterAddr          cosmossdk.AccAddress // Address that grants transaction fees
+	txFees                    cosmossdk.Coins      // Fees for transactions
+	txFromName                string               // Sender name for transactions
+	txGasAdjustment           float64              // Adjustment factor for gas estimation
+	txGasPrices               cosmossdk.DecCoins   // Gas price settings for transactions
+	txGas                     uint64               // Gas limit for transactions
+	txMemo                    string               // Memo attached to transactions
+	txSimulateAndExecute      bool                 // Flag for simulating and executing transactions
+	txTimeoutHeight           uint64               // Transaction timeout height
 }
 
-// New creates a new instance of Client with the provided ProtoCodecMarshaler.
-// It returns a pointer to the newly created Client.
+// New initializes a new Client instance with the given ProtoCodecMarshaler.
+// It sets up default transaction configuration.
 func New(protoCodec codec.ProtoCodecMarshaler) *Client {
 	return &Client{
 		ProtoCodecMarshaler: protoCodec,
@@ -28,25 +51,111 @@ func New(protoCodec codec.ProtoCodecMarshaler) *Client {
 	}
 }
 
-// NewDefault creates a new instance of Client with a default ProtoCodecMarshaler.
-// It returns a pointer to the newly created Client.
-func NewDefault() *Client {
-	return New(types.NewProtoCodec())
-}
-
-// WithKeyring sets the Keyring for the Client and returns the updated Client instance.
-func (c *Client) WithKeyring(kr keyring.Keyring) *Client {
-	c.kr = kr
+// WithChainID sets the blockchain chain ID and returns the updated Client.
+func (c *Client) WithChainID(chainID string) *Client {
+	c.chainID = chainID
 	return c
 }
 
-// Keyring returns the Keyring associated with the Client.
-// If no Keyring was set using WithKeyring, it uses the provided Options to create one.
-func (c *Client) Keyring(opts *Options) (keyring.Keyring, error) {
-	if c.kr != nil {
-		return c.kr, nil
-	}
+// WithKeyring assigns the keyring to the Client and returns the updated Client.
+func (c *Client) WithKeyring(keyring keyring.Keyring) *Client {
+	c.keyring = keyring
+	return c
+}
 
-	// Create and return a new Keyring using options.
-	return opts.Keystore(c)
+// WithLogger assigns a logger instance to the Client and returns the updated Client.
+func (c *Client) WithLogger(logger log.Logger) *Client {
+	c.logger = logger
+	return c
+}
+
+// WithQueryMaxRetries sets the maximum number of retries for queries and returns the updated Client.
+func (c *Client) WithQueryMaxRetries(maxRetries int) *Client {
+	c.queryMaxRetries = maxRetries
+	return c
+}
+
+// WithQueryProve sets the prove flag for queries and returns the updated Client.
+func (c *Client) WithQueryProve(prove bool) *Client {
+	c.queryProve = prove
+	return c
+}
+
+// WithQueryRetryDelay sets the retry delay duration for queries and returns the updated Client.
+func (c *Client) WithQueryRetryDelay(delay time.Duration) *Client {
+	c.queryRetryDelay = delay
+	return c
+}
+
+// WithRPCAddr sets the RPC server address and returns the updated Client.
+func (c *Client) WithRPCAddr(rpcAddr string) *Client {
+	c.rpcAddr = rpcAddr
+	return c
+}
+
+// WithRPCTimeout sets the RPC timeout duration and returns the updated Client.
+func (c *Client) WithRPCTimeout(timeout time.Duration) *Client {
+	c.rpcTimeout = timeout
+	return c
+}
+
+// WithTxFeeGranterAddr sets the transaction fee granter address and returns the updated Client.
+func (c *Client) WithTxFeeGranterAddr(addr cosmossdk.AccAddress) *Client {
+	c.txFeeGranterAddr = addr
+	return c
+}
+
+// WithTxFees assigns transaction fees and returns the updated Client.
+func (c *Client) WithTxFees(fees cosmossdk.Coins) *Client {
+	c.txFees = fees
+	return c
+}
+
+// WithTxFromName sets the "from" name for transactions and returns the updated Client.
+func (c *Client) WithTxFromName(name string) *Client {
+	c.txFromName = name
+	return c
+}
+
+// WithTxGasAdjustment sets the gas adjustment factor for transactions and returns the updated Client.
+func (c *Client) WithTxGasAdjustment(adjustment float64) *Client {
+	c.txGasAdjustment = adjustment
+	return c
+}
+
+// WithTxGasPrices sets the gas prices for transactions and returns the updated Client.
+func (c *Client) WithTxGasPrices(prices cosmossdk.DecCoins) *Client {
+	c.txGasPrices = prices
+	return c
+}
+
+// WithTxGas sets the gas limit for transactions and returns the updated Client.
+func (c *Client) WithTxGas(gas uint64) *Client {
+	c.txGas = gas
+	return c
+}
+
+// WithTxMemo sets the memo for transactions and returns the updated Client.
+func (c *Client) WithTxMemo(memo string) *Client {
+	c.txMemo = memo
+	return c
+}
+
+// WithTxSimulateAndExecute sets the simulate and execute flag and returns the updated Client.
+func (c *Client) WithTxSimulateAndExecute(simulate bool) *Client {
+	c.txSimulateAndExecute = simulate
+	return c
+}
+
+// WithTxTimeoutHeight sets the timeout height for transactions and returns the updated Client.
+func (c *Client) WithTxTimeoutHeight(height uint64) *Client {
+	c.txTimeoutHeight = height
+	return c
+}
+
+// HTTP creates an HTTP client for the given RPC address and timeout configuration.
+// Returns the HTTP client or an error if initialization fails.
+func (c *Client) HTTP() (*http.HTTP, error) {
+	timeout := uint(c.rpcTimeout / time.Second)
+	return http.NewWithTimeout(c.rpcAddr, "/websocket", timeout)
 }

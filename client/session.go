@@ -4,38 +4,35 @@ import (
 	"context"
 
 	cosmossdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/query"
 	base "github.com/sentinel-official/hub/v12/types"
 	"github.com/sentinel-official/hub/v12/x/session/types/v3"
 )
 
 const (
 	// gRPC methods for querying session information
-	methodQuerySession                           = "/sentinel.session.v3.QueryService/QuerySession"
-	methodQuerySessions                          = "/sentinel.session.v3.QueryService/QuerySessions"
-	methodQuerySessionsForAccount                = "/sentinel.session.v3.QueryService/QuerySessionsForAccount"
-	methodQuerySessionsForNode                   = "/sentinel.session.v3.QueryService/QuerySessionsForNode"
-	methodQuerySessionsForSubscription           = "/sentinel.session.v3.QueryService/QuerySessionsForSubscription"
-	methodQuerySessionsForSubscriptionAllocation = "/sentinel.session.v3.QueryService/QuerySessionsForAllocation"
+	methodQuerySession                           = "/sentinel.session.v3.QueryService/QuerySession"                 // Retrieve details of a specific session
+	methodQuerySessions                          = "/sentinel.session.v3.QueryService/QuerySessions"                // Retrieve a list of sessions with pagination
+	methodQuerySessionsForAccount                = "/sentinel.session.v3.QueryService/QuerySessionsForAccount"      // Retrieve sessions associated with a specific account
+	methodQuerySessionsForNode                   = "/sentinel.session.v3.QueryService/QuerySessionsForNode"         // Retrieve sessions associated with a specific node
+	methodQuerySessionsForSubscription           = "/sentinel.session.v3.QueryService/QuerySessionsForSubscription" // Retrieve sessions associated with a specific subscription
+	methodQuerySessionsForSubscriptionAllocation = "/sentinel.session.v3.QueryService/QuerySessionsForAllocation"   // Retrieve sessions for a subscription and account
 )
 
-// Session queries and returns information about a specific session based on the provided session ID.
-// It uses gRPC to send a request to the "/sentinel.session.v3.QueryService/QuerySession" endpoint.
-// The result is a pointer to v3.Session and an error if the query fails.
-func (c *Client) Session(ctx context.Context, id uint64, opts *Options) (res v3.Session, err error) {
-	// Initialize variables for the query.
+// Session retrieves details of a specific session by its ID.
+// Returns the session details and any error encountered.
+func (c *Client) Session(ctx context.Context, id uint64) (res v3.Session, err error) {
 	var (
 		resp v3.QuerySessionResponse
-		req  = &v3.QuerySessionRequest{
-			Id: id,
-		}
+		req  = &v3.QuerySessionRequest{Id: id}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySession, req, &resp, opts); err != nil {
+	// Perform the gRPC query to fetch the session details.
+	if err := c.QueryGRPC(ctx, methodQuerySession, req, &resp); err != nil {
 		return nil, err
 	}
 
-	// Unpack the response and return the subscription and a nil error.
+	// Unpack the session data from the response.
 	if err := c.UnpackAny(resp.Session, &res); err != nil {
 		return nil, err
 	}
@@ -43,151 +40,135 @@ func (c *Client) Session(ctx context.Context, id uint64, opts *Options) (res v3.
 	return res, nil
 }
 
-// Sessions queries and returns a list of sessions based on the provided options.
-// It uses gRPC to send a request to the "/sentinel.session.v3.QueryService/QuerySessions" endpoint.
-// The result is a slice of v3.Session and an error if the query fails.
-func (c *Client) Sessions(ctx context.Context, opts *Options) (res []v3.Session, err error) {
-	// Initialize variables for the query.
+// Sessions retrieves a paginated list of all sessions.
+// Returns the sessions, pagination details, and any error encountered.
+func (c *Client) Sessions(ctx context.Context, pageReq *query.PageRequest) (res []v3.Session, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QuerySessionsResponse
-		req  = &v3.QuerySessionsRequest{
-			Pagination: opts.PageRequest(),
-		}
+		req  = &v3.QuerySessionsRequest{Pagination: pageReq}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySessions, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch the sessions.
+	if err := c.QueryGRPC(ctx, methodQuerySessions, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Unpack each session in the response and return the list of sessions and a nil error.
+	// Unpack each session from the response.
 	res = make([]v3.Session, len(resp.Sessions))
 	for i := 0; i < len(resp.Sessions); i++ {
 		if err := c.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return res, nil
+	return res, resp.Pagination, nil
 }
 
-// SessionsForAccount queries and returns a list of sessions associated with a specific account
-// based on the provided account address and options.
-// It uses gRPC to send a request to the "/sentinel.session.v3.QueryService/QuerySessionsForAccount" endpoint.
-// The result is a slice of v3.Session and an error if the query fails.
-func (c *Client) SessionsForAccount(ctx context.Context, accAddr cosmossdk.AccAddress, opts *Options) (res []v3.Session, err error) {
-	// Initialize variables for the query.
+// SessionsForAccount retrieves sessions associated with a specific account address.
+// Returns the sessions, pagination details, and any error encountered.
+func (c *Client) SessionsForAccount(ctx context.Context, accAddr cosmossdk.AccAddress, pageReq *query.PageRequest) (res []v3.Session, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QuerySessionsForAccountResponse
 		req  = &v3.QuerySessionsForAccountRequest{
 			Address:    accAddr.String(),
-			Pagination: opts.PageRequest(),
+			Pagination: pageReq,
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySessionsForAccount, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch sessions for the given account.
+	if err := c.QueryGRPC(ctx, methodQuerySessionsForAccount, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Unpack each session in the response and return the list of sessions and a nil error.
+	// Unpack each session from the response.
 	res = make([]v3.Session, len(resp.Sessions))
 	for i := 0; i < len(resp.Sessions); i++ {
 		if err := c.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return res, nil
+	return res, resp.Pagination, nil
 }
 
-// SessionsForNode queries and returns a list of sessions associated with a specific node
-// based on the provided node address and options.
-// It uses gRPC to send a request to the "/sentinel.session.v3.QueryService/QuerySessionsForNode" endpoint.
-// The result is a slice of v3.Session and an error if the query fails.
-func (c *Client) SessionsForNode(ctx context.Context, nodeAddr base.NodeAddress, opts *Options) (res []v3.Session, err error) {
-	// Initialize variables for the query.
+// SessionsForNode retrieves sessions associated with a specific node address.
+// Returns the sessions, pagination details, and any error encountered.
+func (c *Client) SessionsForNode(ctx context.Context, nodeAddr base.NodeAddress, pageReq *query.PageRequest) (res []v3.Session, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QuerySessionsForNodeResponse
 		req  = &v3.QuerySessionsForNodeRequest{
 			Address:    nodeAddr.String(),
-			Pagination: opts.PageRequest(),
+			Pagination: pageReq,
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySessionsForNode, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch sessions for the given node.
+	if err := c.QueryGRPC(ctx, methodQuerySessionsForNode, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Unpack each session in the response and return the list of sessions and a nil error.
+	// Unpack each session from the response.
 	res = make([]v3.Session, len(resp.Sessions))
 	for i := 0; i < len(resp.Sessions); i++ {
 		if err := c.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return res, nil
+	return res, resp.Pagination, nil
 }
 
-// SessionsForSubscription queries and returns a list of sessions associated with a specific subscription
-// based on the provided subscription ID and options.
-// It uses gRPC to send a request to the "/sentinel.session.v3.QueryService/QuerySessionsForSubscription" endpoint.
-// The result is a slice of v3.Session and an error if the query fails.
-func (c *Client) SessionsForSubscription(ctx context.Context, id uint64, opts *Options) (res []v3.Session, err error) {
-	// Initialize variables for the query.
+// SessionsForSubscription retrieves sessions associated with a specific subscription ID.
+// Returns the sessions, pagination details, and any error encountered.
+func (c *Client) SessionsForSubscription(ctx context.Context, id uint64, pageReq *query.PageRequest) (res []v3.Session, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QuerySessionsForSubscriptionResponse
 		req  = &v3.QuerySessionsForSubscriptionRequest{
 			Id:         id,
-			Pagination: opts.PageRequest(),
+			Pagination: pageReq,
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySessionsForSubscription, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch sessions for the given subscription.
+	if err := c.QueryGRPC(ctx, methodQuerySessionsForSubscription, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Unpack each session in the response and return the list of sessions and a nil error.
+	// Unpack each session from the response.
 	res = make([]v3.Session, len(resp.Sessions))
 	for i := 0; i < len(resp.Sessions); i++ {
 		if err := c.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return res, nil
+	return res, resp.Pagination, nil
 }
 
-// SessionsForSubscriptionAllocation queries and returns a list of sessions associated with a specific subscription allocation
-// based on the provided subscription ID, account address, and options.
-// It uses gRPC to send a request to the "/sentinel.session.v3.QueryService/QuerySessionsForAllocation" endpoint.
-// The result is a slice of v3.Session and an error if the query fails.
-func (c *Client) SessionsForSubscriptionAllocation(ctx context.Context, id uint64, accAddr cosmossdk.AccAddress, opts *Options) (res []v3.Session, err error) {
-	// Initialize variables for the query.
+// SessionsForSubscriptionAllocation retrieves sessions associated with a specific subscription ID and account address.
+// Returns the sessions, pagination details, and any error encountered.
+func (c *Client) SessionsForSubscriptionAllocation(ctx context.Context, id uint64, accAddr cosmossdk.AccAddress, pageReq *query.PageRequest) (res []v3.Session, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QuerySessionsForAllocationResponse
 		req  = &v3.QuerySessionsForAllocationRequest{
 			Id:         id,
 			Address:    accAddr.String(),
-			Pagination: opts.PageRequest(),
+			Pagination: pageReq,
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQuerySessionsForSubscriptionAllocation, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch sessions for the given subscription and account.
+	if err := c.QueryGRPC(ctx, methodQuerySessionsForSubscriptionAllocation, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Unpack each session in the response and return the list of sessions and a nil error.
+	// Unpack each session from the response.
 	res = make([]v3.Session, len(resp.Sessions))
 	for i := 0; i < len(resp.Sessions); i++ {
 		if err := c.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return res, nil
+	return res, resp.Pagination, nil
 }

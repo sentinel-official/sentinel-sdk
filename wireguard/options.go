@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/pelletier/go-toml/v2"
-	"github.com/spf13/cobra"
 )
 
 // ClientOptions represents the WireGuard client configuration options.
@@ -33,21 +32,6 @@ func (co *ClientOptions) WriteConfigToFile(filepath string) error {
 	return os.WriteFile(filepath, []byte(data), 0644)
 }
 
-// NewClientOptionsFromFile reads the configuration from a TOML file and unmarshals it into a ClientOptions instance.
-func NewClientOptionsFromFile(filepath string) (*ClientOptions, error) {
-	data, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	var co ClientOptions
-	if err := toml.Unmarshal(data, &co); err != nil {
-		return nil, err
-	}
-
-	return &co, nil
-}
-
 // ServerOptions represents the WireGuard server configuration options.
 type ServerOptions struct {
 	Addresses    []string `json:"addresses"`
@@ -57,48 +41,6 @@ type ServerOptions struct {
 	ListenPort   uint16   `json:"listen_port"`
 	OutInterface string   `json:"out_interface"`
 	PrivateKey   string   `json:"private_key"`
-}
-
-// WithAddresses sets the Addresses field and returns the modified ServerOptions instance.
-func (so *ServerOptions) WithAddresses(v ...string) *ServerOptions {
-	so.Addresses = v
-	return so
-}
-
-// WithEnableIPv4 sets the EnableIPv4 field and returns the modified ServerOptions instance.
-func (so *ServerOptions) WithEnableIPv4(v bool) *ServerOptions {
-	so.EnableIPv4 = v
-	return so
-}
-
-// WithEnableIPv6 sets the EnableIPv6 field and returns the modified ServerOptions instance.
-func (so *ServerOptions) WithEnableIPv6(v bool) *ServerOptions {
-	so.EnableIPv6 = v
-	return so
-}
-
-// WithInterface sets the Interface field and returns the modified ServerOptions instance.
-func (so *ServerOptions) WithInterface(v string) *ServerOptions {
-	so.Interface = v
-	return so
-}
-
-// WithListenPort sets the ListenPort field and returns the modified ServerOptions instance.
-func (so *ServerOptions) WithListenPort(v uint16) *ServerOptions {
-	so.ListenPort = v
-	return so
-}
-
-// WithOutInterface sets the OutInterface field and returns the modified ServerOptions instance.
-func (so *ServerOptions) WithOutInterface(v string) *ServerOptions {
-	so.OutInterface = v
-	return so
-}
-
-// WithPrivateKey sets the PrivateKey field and returns the modified ServerOptions instance.
-func (so *ServerOptions) WithPrivateKey(v string) *ServerOptions {
-	so.PrivateKey = v
-	return so
 }
 
 // WriteToFile writes the ServerOptions configuration to a TOML file.
@@ -127,8 +69,7 @@ func (so *ServerOptions) Validate() error {
 		return errors.New("addresses cannot be empty")
 	}
 	for _, item := range so.Addresses {
-		_, err := netip.ParsePrefix(item)
-		if err != nil {
+		if _, err := netip.ParsePrefix(item); err != nil {
 			return fmt.Errorf("invalid address: %w", err)
 		}
 	}
@@ -143,92 +84,9 @@ func (so *ServerOptions) Validate() error {
 		return errors.New("out_interface cannot be empty")
 	}
 
-	_, err := NewKeyFromString(so.PrivateKey)
-	if err != nil {
+	if _, err := NewKeyFromString(so.PrivateKey); err != nil {
 		return fmt.Errorf("invalid private_key: %w", err)
 	}
 
 	return nil
-}
-
-// AddServerFlagsToCmd adds server-related flags to the given Cobra command.
-func AddServerFlagsToCmd(cmd *cobra.Command, prefix string) {
-	if prefix != "" {
-		prefix = prefix + "."
-	}
-
-	cmd.Flags().StringSlice(prefix+"addresses", nil, "Comma-separated list of addresses for the server.")
-	cmd.Flags().Bool(prefix+"enable-ipv4", false, "Enable IPv4 for the server.")
-	cmd.Flags().Bool(prefix+"enable-ipv6", false, "Enable IPv6 for the server.")
-	cmd.Flags().String(prefix+"interface", "", "Network interface for the server.")
-	cmd.Flags().Uint16(prefix+"listen-port", 0, "Listen port for the server.")
-	cmd.Flags().String(prefix+"out-interface", "", "Outgoing network interface for the server.")
-	cmd.Flags().String(prefix+"private-key", "", "Private key for the server.")
-}
-
-// NewServerOptionsFromCmd creates and returns a ServerOptions instance from the given Cobra command's flags.
-func NewServerOptionsFromCmd(cmd *cobra.Command, prefix string) (*ServerOptions, error) {
-	if prefix != "" {
-		prefix = prefix + "."
-	}
-
-	addresses, err := cmd.Flags().GetStringSlice(prefix + "addresses")
-	if err != nil {
-		return nil, err
-	}
-
-	enableIPv4, err := cmd.Flags().GetBool(prefix + "enable-ipv4")
-	if err != nil {
-		return nil, err
-	}
-
-	enableIPv6, err := cmd.Flags().GetBool(prefix + "enable-ipv6")
-	if err != nil {
-		return nil, err
-	}
-
-	iface, err := cmd.Flags().GetString(prefix + "interface")
-	if err != nil {
-		return nil, err
-	}
-
-	listenPort, err := cmd.Flags().GetUint16(prefix + "listen-port")
-	if err != nil {
-		return nil, err
-	}
-
-	outIface, err := cmd.Flags().GetString(prefix + "out-interface")
-	if err != nil {
-		return nil, err
-	}
-
-	privateKey, err := cmd.Flags().GetString(prefix + "private-key")
-	if err != nil {
-		return nil, err
-	}
-
-	return &ServerOptions{
-		Addresses:    addresses,
-		EnableIPv4:   enableIPv4,
-		EnableIPv6:   enableIPv6,
-		Interface:    iface,
-		ListenPort:   listenPort,
-		OutInterface: outIface,
-		PrivateKey:   privateKey,
-	}, nil
-}
-
-// NewServerOptionsFromFile reads the configuration from a TOML file and unmarshals it into a ServerOptions instance.
-func NewServerOptionsFromFile(filepath string) (*ServerOptions, error) {
-	data, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	var so ServerOptions
-	if err := toml.Unmarshal(data, &so); err != nil {
-		return nil, err
-	}
-
-	return &so, nil
 }

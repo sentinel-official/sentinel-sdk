@@ -3,81 +3,71 @@ package client
 import (
 	"context"
 
+	"github.com/cosmos/cosmos-sdk/types/query"
 	base "github.com/sentinel-official/hub/v12/types"
 	v1base "github.com/sentinel-official/hub/v12/types/v1"
-	"github.com/sentinel-official/hub/v12/x/plan/types/v2"
+	"github.com/sentinel-official/hub/v12/x/plan/types/v3"
 )
 
 const (
 	// gRPC methods for querying plan information
-	methodQueryPlan             = "/sentinel.plan.v2.QueryService/QueryPlan"
-	methodQueryPlans            = "/sentinel.plan.v2.QueryService/QueryPlans"
-	methodQueryPlansForProvider = "/sentinel.plan.v2.QueryService/QueryPlansForProvider"
+	methodQueryPlan             = "/sentinel.plan.v3.QueryService/QueryPlan"             // Retrieve details of a specific plan
+	methodQueryPlans            = "/sentinel.plan.v3.QueryService/QueryPlans"            // Retrieve a list of plans
+	methodQueryPlansForProvider = "/sentinel.plan.v3.QueryService/QueryPlansForProvider" // Retrieve plans associated with a specific provider
 )
 
-// Plan queries and returns information about a specific plan based on the provided plan ID.
-// It uses gRPC to send a request to the "/sentinel.plan.v2.QueryService/QueryPlan" endpoint.
-// The result is a pointer to v2.Plan and an error if the query fails.
-func (c *Client) Plan(ctx context.Context, id uint64, opts *Options) (res *v2.Plan, err error) {
-	// Initialize variables for the query.
+// Plan retrieves details of a specific plan by its ID.
+// Returns the plan details and any error encountered.
+func (c *Client) Plan(ctx context.Context, id uint64) (res *v3.Plan, err error) {
 	var (
-		resp v2.QueryPlanResponse
-		req  = &v2.QueryPlanRequest{
-			Id: id,
-		}
+		resp v3.QueryPlanResponse
+		req  = &v3.QueryPlanRequest{Id: id}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQueryPlan, req, &resp, opts); err != nil {
+	// Perform the gRPC query to fetch the plan details.
+	if err := c.QueryGRPC(ctx, methodQueryPlan, req, &resp); err != nil {
 		return nil, err
 	}
 
-	// Return a pointer to the plan and a nil error.
 	return &resp.Plan, nil
 }
 
-// Plans queries and returns a list of plans based on the provided status and options.
-// It uses gRPC to send a request to the "/sentinel.plan.v2.QueryService/QueryPlans" endpoint.
-// The result is a slice of v2.Plan and an error if the query fails.
-func (c *Client) Plans(ctx context.Context, status v1base.Status, opts *Options) (res []v2.Plan, err error) {
-	// Initialize variables for the query.
+// Plans retrieves a paginated list of plans filtered by their status.
+// Returns the plans, pagination details, and any error encountered.
+func (c *Client) Plans(ctx context.Context, status v1base.Status, pageReq *query.PageRequest) (res []v3.Plan, pageRes *query.PageResponse, err error) {
 	var (
-		resp v2.QueryPlansResponse
-		req  = &v2.QueryPlansRequest{
+		resp v3.QueryPlansResponse
+		req  = &v3.QueryPlansRequest{
 			Status:     status,
-			Pagination: opts.PageRequest(),
+			Pagination: pageReq,
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQueryPlans, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch the plans.
+	if err := c.QueryGRPC(ctx, methodQueryPlans, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Return the list of plans and a nil error.
-	return resp.Plans, nil
+	return resp.Plans, resp.Pagination, nil
 }
 
-// PlansForProvider queries and returns a list of plans associated with a specific provider
-// based on the provided provider address, status, and options.
-// It uses gRPC to send a request to the "/sentinel.plan.v2.QueryService/QueryPlansForProvider" endpoint.
-// The result is a slice of v2.Plan and an error if the query fails.
-func (c *Client) PlansForProvider(ctx context.Context, provAddr base.ProvAddress, status v1base.Status, opts *Options) (res []v2.Plan, err error) {
-	// Initialize variables for the query.
+// PlansForProvider retrieves a list of plans associated with a specific provider address.
+// Filters results by status and supports pagination.
+// Returns the plans, pagination details, and any error encountered.
+func (c *Client) PlansForProvider(ctx context.Context, provAddr base.ProvAddress, status v1base.Status, pageReq *query.PageRequest) (res []v3.Plan, pageRes *query.PageResponse, err error) {
 	var (
-		resp v2.QueryPlansForProviderResponse
-		req  = &v2.QueryPlansForProviderRequest{
+		resp v3.QueryPlansForProviderResponse
+		req  = &v3.QueryPlansForProviderRequest{
 			Address:    provAddr.String(),
 			Status:     status,
-			Pagination: opts.PageRequest(),
+			Pagination: pageReq,
 		}
 	)
 
-	// Send a gRPC query using the provided context, method, request, response, and options.
-	if err := c.QueryGRPC(ctx, methodQueryPlansForProvider, req, &resp, opts); err != nil {
-		return nil, err
+	// Perform the gRPC query to fetch plans for the given provider.
+	if err := c.QueryGRPC(ctx, methodQueryPlansForProvider, req, &resp); err != nil {
+		return nil, nil, err
 	}
 
-	// Return the list of plans and a nil error.
-	return resp.Plans, nil
+	return resp.Plans, resp.Pagination, nil
 }
