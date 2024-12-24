@@ -21,12 +21,9 @@ type Client struct {
 	name    string // Name of the interface.
 }
 
-// NewClient creates a new WireGuard client with the given home directory and name.
-func NewClient(homeDir, name string) *Client {
-	return &Client{
-		homeDir: homeDir,
-		name:    name,
-	}
+// NewClient creates a new Client instance.
+func NewClient() *Client {
+	return &Client{}
 }
 
 // configFilePath returns the file path of the client's configuration file.

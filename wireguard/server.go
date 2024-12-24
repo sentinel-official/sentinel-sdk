@@ -19,8 +19,8 @@ var _ types.ServerService = (*Server)(nil)
 // Server represents the WireGuard server instance.
 type Server struct {
 	homeDir string       // Home directory of the WireGuard server.
-	name    string       // Name of the server instance.
 	info    []byte       // Information about the server instance.
+	name    string       // Name of the server instance.
 	pm      *PeerManager // Peer manager for handling peer information.
 }
 
@@ -38,12 +38,6 @@ func (s *Server) WithHomeDir(homeDir string) *Server {
 // WithName sets the name for the server and returns the updated Server instance.
 func (s *Server) WithName(name string) *Server {
 	s.name = name
-	return s
-}
-
-// WithInfo sets the server's information and returns the updated Server instance.
-func (s *Server) WithInfo(info []byte) *Server {
-	s.info = info
 	return s
 }
 

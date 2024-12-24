@@ -11,18 +11,23 @@ import (
 
 	"github.com/shirou/gopsutil/v4/process"
 
-	sentinelsdk "github.com/sentinel-official/sentinel-go-sdk/types"
+	"github.com/sentinel-official/sentinel-go-sdk/types"
 	"github.com/sentinel-official/sentinel-go-sdk/utils"
 )
 
-// Ensure Client implements the sentinelsdk.ClientService interface.
-var _ sentinelsdk.ClientService = (*Client)(nil)
+// Ensure Client implements the types.ClientService interface.
+var _ types.ClientService = (*Client)(nil)
 
 // Client represents a V2Ray client with associated command, home directory, and name.
 type Client struct {
 	cmd     *exec.Cmd // Command for running the V2Ray client.
 	homeDir string    // Home directory for client files.
 	name    string    // Name of the interface.
+}
+
+// NewClient creates a new Client instance.
+func NewClient() *Client {
+	return &Client{}
 }
 
 // configFilePath returns the file path of the client's configuration file.
@@ -66,8 +71,8 @@ func (c *Client) writePIDToFile(pid int) error {
 }
 
 // Type returns the service type of the client.
-func (c *Client) Type() sentinelsdk.ServiceType {
-	return sentinelsdk.ServiceTypeV2Ray
+func (c *Client) Type() types.ServiceType {
+	return types.ServiceTypeV2Ray
 }
 
 // IsUp checks if the V2Ray client process is running.
@@ -110,13 +115,13 @@ func (c *Client) IsUp(ctx context.Context) (bool, error) {
 // PreUp writes the configuration to the config file before starting the client process.
 func (c *Client) PreUp(v interface{}) error {
 	// Checks for valid parameter type.
-	cfg, ok := v.(*ClientOptions)
+	cfg, ok := v.(*ClientConfig)
 	if !ok {
 		return fmt.Errorf("invalid parameter type %T", v)
 	}
 
 	// Writes configuration to file.
-	return cfg.WriteConfigToFile(c.configFilePath())
+	return cfg.WriteBuiltToFile(c.configFilePath())
 }
 
 // Up starts the V2Ray client process.

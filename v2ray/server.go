@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	sentinelsdk "github.com/sentinel-official/sentinel-go-sdk/types"
+	"github.com/sentinel-official/sentinel-go-sdk/types"
 	"github.com/sentinel-official/sentinel-go-sdk/utils"
 )
 
@@ -26,26 +26,39 @@ const (
 	InfoLen = 2 + 1
 )
 
-// Ensure Server implements sentinelsdk.ServerService interface.
-var _ sentinelsdk.ServerService = (*Server)(nil)
+// Ensure Server implements types.ServerService interface.
+var _ types.ServerService = (*Server)(nil)
 
 // Server represents the V2Ray server instance.
 type Server struct {
-	homeDir string       // Home directory of the V2Ray server.
-	name    string       // Name of the server instance.
-	info    []byte       // Information about the server instance.
 	cmd     *exec.Cmd    // Command to run the V2Ray server.
+	homeDir string       // Home directory of the V2Ray server.
+	info    []byte       // Information about the server instance.
+	name    string       // Name of the server instance.
 	pm      *PeerManager // Peer manager for handling peer information.
 }
 
-// NewServer creates a new instance of the V2Ray server with the specified home directory.
-func NewServer(homeDir string) *Server {
-	return &Server{
-		homeDir: homeDir,
-		info:    make([]byte, InfoLen),
-		cmd:     nil,
-		pm:      NewPeerManager(), // Initialize a new PeerManager for managing peers.
-	}
+// NewServer creates a new Server instance.
+func NewServer() *Server {
+	return &Server{}
+}
+
+// WithHomeDir sets the home directory for the server and returns the updated Server instance.
+func (s *Server) WithHomeDir(homeDir string) *Server {
+	s.homeDir = homeDir
+	return s
+}
+
+// WithName sets the name for the server and returns the updated Server instance.
+func (s *Server) WithName(name string) *Server {
+	s.name = name
+	return s
+}
+
+// WithPeerManager sets the PeerManager for the server and returns the updated Server instance.
+func (s *Server) WithPeerManager(pm *PeerManager) *Server {
+	s.pm = pm
+	return s
 }
 
 // configFilePath returns the full path of the V2Ray server's configuration file.
@@ -139,8 +152,8 @@ func (s *Server) Info() []byte {
 }
 
 // Type returns the service type of the server.
-func (s *Server) Type() sentinelsdk.ServiceType {
-	return sentinelsdk.ServiceTypeV2Ray
+func (s *Server) Type() types.ServiceType {
+	return types.ServiceTypeV2Ray
 }
 
 // IsUp checks if the V2Ray server process is running.
@@ -183,13 +196,13 @@ func (s *Server) IsUp(ctx context.Context) (bool, error) {
 // PreUp writes the configuration to the config file before starting the server process.
 func (s *Server) PreUp(v interface{}) error {
 	// Check for valid parameter type.
-	cfg, ok := v.(*ServerOptions)
+	cfg, ok := v.(*ServerConfig)
 	if !ok {
 		return fmt.Errorf("invalid parameter type %T", v)
 	}
 
 	// Write configuration to file.
-	return cfg.WriteConfigToFile(s.configFilePath())
+	return cfg.WriteBuiltToFile(s.configFilePath())
 }
 
 // Up starts the V2Ray server process.
@@ -399,7 +412,7 @@ func (s *Server) PeerCount() int {
 }
 
 // PeerStatistics retrieves statistics for each peer connected to the V2Ray server.
-func (s *Server) PeerStatistics(ctx context.Context) (items []*sentinelsdk.PeerStatistic, err error) {
+func (s *Server) PeerStatistics(ctx context.Context) (items []*types.PeerStatistic, err error) {
 	// Establish a gRPC client connection to the stats service.
 	conn, client, err := s.statsServiceClient()
 	if err != nil {
@@ -460,7 +473,7 @@ func (s *Server) PeerStatistics(ctx context.Context) (items []*sentinelsdk.PeerS
 		// Append peer statistics to the result collection.
 		items = append(
 			items,
-			&sentinelsdk.PeerStatistic{
+			&types.PeerStatistic{
 				Key:           key,
 				DownloadBytes: downLink.GetValue(),
 				UploadBytes:   upLink.GetValue(),

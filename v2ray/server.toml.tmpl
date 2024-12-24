@@ -1,0 +1,18 @@
+# Inbound field descriptions:
+# - network: The type of network connection (e.g., "tcp", "udp").
+# - port: The port number for the inbound connection. Must be > 1024.
+# - protocol: The communication protocol (e.g., "http", "vmess").
+# - security: The security setting (e.g., "none", "tls").
+# - tls_cert_path: Path to the TLS certificate file, required if security is set to "tls".
+# - tls_key_path: Path to the TLS key file, required if security is set to "tls".
+
+{{- range $index, $inbound := .Inbounds }}
+[[inbounds]]
+network = "{{ $inbound.Network }}"
+port = {{ $inbound.Port }}
+protocol = "{{ $inbound.Protocol }}"
+security = "{{ $inbound.Security }}"
+tls_cert_path = "{{ $inbound.TLSCertPath }}"
+tls_key_path = "{{ $inbound.TLSKeyPath }}"
+
+{{- end }}
