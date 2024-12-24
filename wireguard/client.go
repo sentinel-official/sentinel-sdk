@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"strings"
 
-	sentinelsdk "github.com/sentinel-official/sentinel-go-sdk/types"
+	"github.com/sentinel-official/sentinel-go-sdk/types"
 	"github.com/sentinel-official/sentinel-go-sdk/utils"
 )
 
-// Ensure Client implements the sentinelsdk.ClientService interface.
-var _ sentinelsdk.ClientService = (*Client)(nil)
+// Ensure Client implements the types.ClientService interface.
+var _ types.ClientService = (*Client)(nil)
 
 // Client represents a WireGuard client with associated home directory and name.
 type Client struct {
@@ -35,8 +35,8 @@ func (c *Client) configFilePath() string {
 }
 
 // Type returns the service type of the client.
-func (c *Client) Type() sentinelsdk.ServiceType {
-	return sentinelsdk.ServiceTypeWireGuard
+func (c *Client) Type() types.ServiceType {
+	return types.ServiceTypeWireGuard
 }
 
 // IsUp checks if the WireGuard interface is up.
@@ -63,13 +63,12 @@ func (c *Client) IsUp(ctx context.Context) (bool, error) {
 // PreUp writes the configuration to the config file before starting the client process.
 func (c *Client) PreUp(v interface{}) error {
 	// Checks for valid parameter type.
-	cfg, ok := v.(*ClientOptions)
+	cfg, ok := v.(*ClientConfig)
 	if !ok {
 		return fmt.Errorf("invalid parameter type %T", v)
 	}
 
-	// Writes configuration to file.
-	return cfg.WriteConfigToFile(c.configFilePath())
+	return cfg.WriteBuiltToFile(c.configFilePath())
 }
 
 // PostUp performs operations after the client process is started.

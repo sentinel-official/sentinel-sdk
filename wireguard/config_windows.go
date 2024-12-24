@@ -1,11 +1,11 @@
 package wireguard
 
 // PostDown generates the PostDown rules
-func (so *ServerOptions) PostDown() string {
+func (c *ServerConfig) PostDown() string {
 	return ""
 }
 
 // PostUp generates the PostUp rules
-func (so *ServerOptions) PostUp() string {
+func (c *ServerConfig) PostUp() string {
 	return ""
 }

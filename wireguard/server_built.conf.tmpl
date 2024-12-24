@@ -1,8 +1,6 @@
 [Interface]
-Address = {{ join .Addresses ", " }}
+Address = {{ .Address }}
 PrivateKey = {{ .PrivateKey }}
 ListenPort = {{ .ListenPort }}
-{{- if or .EnableIPv4 .EnableIPv6 }}
 PostUp = {{ .PostUp }}
 PostDown = {{ .PostDown }}
-{{- end }}

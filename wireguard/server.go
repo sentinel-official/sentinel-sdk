@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"strings"
 
-	sentinelsdk "github.com/sentinel-official/sentinel-go-sdk/types"
+	"github.com/sentinel-official/sentinel-go-sdk/types"
 	"github.com/sentinel-official/sentinel-go-sdk/utils"
 )
 
-// Ensure Server implements sentinelsdk.ServerService interface.
-var _ sentinelsdk.ServerService = (*Server)(nil)
+// Ensure Server implements types.ServerService interface.
+var _ types.ServerService = (*Server)(nil)
 
 // Server represents the WireGuard server instance.
 type Server struct {
@@ -22,6 +22,35 @@ type Server struct {
 	name    string       // Name of the server instance.
 	info    []byte       // Information about the server instance.
 	pm      *PeerManager // Peer manager for handling peer information.
+}
+
+// NewServer creates a new Server instance.
+func NewServer() *Server {
+	return &Server{}
+}
+
+// WithHomeDir sets the home directory for the server and returns the updated Server instance.
+func (s *Server) WithHomeDir(homeDir string) *Server {
+	s.homeDir = homeDir
+	return s
+}
+
+// WithName sets the name for the server and returns the updated Server instance.
+func (s *Server) WithName(name string) *Server {
+	s.name = name
+	return s
+}
+
+// WithInfo sets the server's information and returns the updated Server instance.
+func (s *Server) WithInfo(info []byte) *Server {
+	s.info = info
+	return s
+}
+
+// WithPeerManager sets the PeerManager for the server and returns the updated Server instance.
+func (s *Server) WithPeerManager(pm *PeerManager) *Server {
+	s.pm = pm
+	return s
 }
 
 // Info returns the server's information.
@@ -35,8 +64,8 @@ func (s *Server) configFilePath() string {
 }
 
 // Type returns the service type of the server.
-func (s *Server) Type() sentinelsdk.ServiceType {
-	return sentinelsdk.ServiceTypeWireGuard
+func (s *Server) Type() types.ServiceType {
+	return types.ServiceTypeWireGuard
 }
 
 // IsUp checks if the WireGuard server process is running.
@@ -63,13 +92,13 @@ func (s *Server) IsUp(ctx context.Context) (bool, error) {
 // PreUp writes the configuration to the config file before starting the server process.
 func (s *Server) PreUp(v interface{}) error {
 	// Checks for valid parameter type.
-	cfg, ok := v.(*ServerOptions)
+	cfg, ok := v.(*ServerConfig)
 	if !ok {
 		return fmt.Errorf("invalid parameter type %T", v)
 	}
 
 	// Writes configuration to file.
-	return cfg.WriteConfigToFile(s.configFilePath())
+	return cfg.WriteBuiltToFile(s.configFilePath())
 }
 
 // PostUp performs operations after the server process is started.
@@ -190,7 +219,7 @@ func (s *Server) PeerCount() int {
 }
 
 // PeerStatistics retrieves statistics for each peer connected to the WireGuard server.
-func (s *Server) PeerStatistics(ctx context.Context) (items []*sentinelsdk.PeerStatistic, err error) {
+func (s *Server) PeerStatistics(ctx context.Context) (items []*types.PeerStatistic, err error) {
 	// Retrieves the interface name.
 	iface, err := s.interfaceName()
 	if err != nil {
@@ -230,7 +259,7 @@ func (s *Server) PeerStatistics(ctx context.Context) (items []*sentinelsdk.PeerS
 		// Append peer statistics to the result collection.
 		items = append(
 			items,
-			&sentinelsdk.PeerStatistic{
+			&types.PeerStatistic{
 				Key:           columns[0],
 				DownloadBytes: downloadBytes,
 				UploadBytes:   uploadBytes,
