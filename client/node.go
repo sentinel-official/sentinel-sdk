@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/cosmos/cosmos-sdk/types/query"
-	base "github.com/sentinel-official/hub/v12/types"
-	v1base "github.com/sentinel-official/hub/v12/types/v1"
+	"github.com/sentinel-official/hub/v12/types"
+	"github.com/sentinel-official/hub/v12/types/v1"
 	"github.com/sentinel-official/hub/v12/x/node/types/v3"
 )
 
@@ -18,7 +18,7 @@ const (
 
 // Node retrieves details of a specific node by its address.
 // Returns the node details and any error encountered.
-func (c *Client) Node(ctx context.Context, nodeAddr base.NodeAddress) (res *v3.Node, err error) {
+func (c *Client) Node(ctx context.Context, nodeAddr types.NodeAddress) (res *v3.Node, err error) {
 	var (
 		resp v3.QueryNodeResponse
 		req  = &v3.QueryNodeRequest{Address: nodeAddr.String()}
@@ -34,7 +34,7 @@ func (c *Client) Node(ctx context.Context, nodeAddr base.NodeAddress) (res *v3.N
 
 // Nodes retrieves a paginated list of nodes filtered by their status.
 // Returns the nodes, pagination details, and any error encountered.
-func (c *Client) Nodes(ctx context.Context, status v1base.Status, pageReq *query.PageRequest) (res []v3.Node, pageRes *query.PageResponse, err error) {
+func (c *Client) Nodes(ctx context.Context, status v1.Status, pageReq *query.PageRequest) (res []v3.Node, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QueryNodesResponse
 		req  = &v3.QueryNodesRequest{
@@ -54,7 +54,7 @@ func (c *Client) Nodes(ctx context.Context, status v1base.Status, pageReq *query
 // NodesForPlan retrieves a list of nodes associated with a specific plan ID.
 // Filters results by status and supports pagination.
 // Returns the nodes, pagination details, and any error encountered.
-func (c *Client) NodesForPlan(ctx context.Context, id uint64, status v1base.Status, pageReq *query.PageRequest) (res []v3.Node, pageRes *query.PageResponse, err error) {
+func (c *Client) NodesForPlan(ctx context.Context, id uint64, status v1.Status, pageReq *query.PageRequest) (res []v3.Node, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QueryNodesForPlanResponse
 		req  = &v3.QueryNodesForPlanRequest{

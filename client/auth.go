@@ -5,7 +5,7 @@ import (
 
 	cosmossdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	auth "github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 
 const (
@@ -16,10 +16,10 @@ const (
 
 // Account retrieves an account by its address using a gRPC query.
 // Returns the account interface and any potential error encountered.
-func (c *Client) Account(ctx context.Context, accAddr cosmossdk.AccAddress) (res authtypes.AccountI, err error) {
+func (c *Client) Account(ctx context.Context, accAddr cosmossdk.AccAddress) (res auth.AccountI, err error) {
 	var (
-		resp authtypes.QueryAccountResponse
-		req  = &authtypes.QueryAccountRequest{Address: accAddr.String()}
+		resp auth.QueryAccountResponse
+		req  = &auth.QueryAccountRequest{Address: accAddr.String()}
 	)
 
 	// Perform the gRPC query to fetch the account details.
@@ -28,7 +28,7 @@ func (c *Client) Account(ctx context.Context, accAddr cosmossdk.AccAddress) (res
 	}
 
 	// Unpack the retrieved account data into the account interface.
-	if err := c.UnpackAny(resp.Account, &res); err != nil {
+	if err := c.protoCodec.UnpackAny(resp.Account, &res); err != nil {
 		return nil, err
 	}
 
@@ -37,10 +37,10 @@ func (c *Client) Account(ctx context.Context, accAddr cosmossdk.AccAddress) (res
 
 // Accounts retrieves a list of accounts with pagination support using a gRPC query.
 // Returns a slice of account interfaces, pagination details, and any potential error.
-func (c *Client) Accounts(ctx context.Context, pageReq *query.PageRequest) (res []authtypes.AccountI, pageRes *query.PageResponse, err error) {
+func (c *Client) Accounts(ctx context.Context, pageReq *query.PageRequest) (res []auth.AccountI, pageRes *query.PageResponse, err error) {
 	var (
-		resp authtypes.QueryAccountsResponse
-		req  = &authtypes.QueryAccountsRequest{Pagination: pageReq}
+		resp auth.QueryAccountsResponse
+		req  = &auth.QueryAccountsRequest{Pagination: pageReq}
 	)
 
 	// Perform the gRPC query to fetch paginated account details.
@@ -49,9 +49,9 @@ func (c *Client) Accounts(ctx context.Context, pageReq *query.PageRequest) (res 
 	}
 
 	// Allocate memory for account slice and unpack each account record.
-	res = make([]authtypes.AccountI, len(resp.Accounts))
+	res = make([]auth.AccountI, len(resp.Accounts))
 	for i := 0; i < len(resp.Accounts); i++ {
-		if err := c.UnpackAny(resp.Accounts[i], &res[i]); err != nil {
+		if err := c.protoCodec.UnpackAny(resp.Accounts[i], &res[i]); err != nil {
 			return nil, nil, err
 		}
 	}

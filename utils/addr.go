@@ -1,20 +1,20 @@
 package utils
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	base "github.com/sentinel-official/hub/v12/types"
+	cosmossdk "github.com/cosmos/cosmos-sdk/types"
+	sentinelhub "github.com/sentinel-official/hub/v12/types"
 )
 
-// MustAccAddrFromBech32 converts a Bech32-encoded string to a sdk.AccAddress,
+// MustAccAddrFromBech32 converts a Bech32-encoded string to a cosmossdk.AccAddress,
 // panicking if there is an error during the conversion.
-func MustAccAddrFromBech32(v string) sdk.AccAddress {
+func MustAccAddrFromBech32(v string) cosmossdk.AccAddress {
 	// If the input string is empty, return nil
 	if v == "" {
 		return nil
 	}
 
-	// Attempt to convert the Bech32 string to a sdk.AccAddress
-	addr, err := sdk.AccAddressFromBech32(v)
+	// Attempt to convert the Bech32 string to a cosmossdk.AccAddress
+	addr, err := cosmossdk.AccAddressFromBech32(v)
 
 	// If there is an error during the conversion, panic
 	if err != nil {
@@ -25,16 +25,16 @@ func MustAccAddrFromBech32(v string) sdk.AccAddress {
 	return addr
 }
 
-// MustNodeAddrFromBech32 converts a Bech32-encoded string to a base.NodeAddress,
+// MustNodeAddrFromBech32 converts a Bech32-encoded string to a sentinelhub.NodeAddress,
 // panicking if there is an error during the conversion.
-func MustNodeAddrFromBech32(v string) base.NodeAddress {
+func MustNodeAddrFromBech32(v string) sentinelhub.NodeAddress {
 	// If the input string is empty, return nil
 	if v == "" {
 		return nil
 	}
 
-	// Attempt to convert the Bech32 string to a base.NodeAddress
-	addr, err := base.NodeAddressFromBech32(v)
+	// Attempt to convert the Bech32 string to a sentinelhub.NodeAddress
+	addr, err := sentinelhub.NodeAddressFromBech32(v)
 
 	// If there is an error during the conversion, panic
 	if err != nil {

@@ -38,8 +38,9 @@ func KeysCmd() *cobra.Command {
 			}
 
 			// Create a new client with the keyring and set it in the command context
-			c := client.New(protoCodec).
-				WithKeyring(kr)
+			c := client.New().
+				WithKeyring(kr).
+				WithProtoCodec(protoCodec)
 
 			ctx := context.WithValue(cmd.Context(), client.ContextKey, c)
 			cmd.SetContext(ctx)

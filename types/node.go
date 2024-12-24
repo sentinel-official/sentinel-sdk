@@ -1,42 +1,37 @@
 package types
 
 import (
-	"time"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	base "github.com/sentinel-official/hub/v12/types"
+	"cosmossdk.io/math"
+	sentinelhub "github.com/sentinel-official/hub/v12/types"
+	"github.com/sentinel-official/hub/v12/types/v1"
 
 	"github.com/sentinel-official/sentinel-go-sdk/libs/geoip"
 )
 
 type (
-	Bandwidth struct {
-		Download int64 `json:"download"`
-		Upload   int64 `json:"upload"`
+	BandwidthInfo struct {
+		Down math.Int `json:"down"`
+		Up   math.Int `json:"up"`
 	}
-	Handshake struct {
-		Enable bool   `json:"enable"`
-		Peers  uint64 `json:"peers"`
+	HandshakeInfo struct {
+		Enable bool  `json:"enable"`
+		Peers  int64 `json:"peers"`
 	}
-	QOS struct {
+	QOSInfo struct {
 		MaxPeers int `json:"max_peers"`
 	}
 )
 
 type NodeInfo struct {
-	Address                base.NodeAddress `json:"address"`
-	Bandwidth              *Bandwidth       `json:"bandwidth"`
-	Handshake              *Handshake       `json:"handshake"`
-	IntervalSetSessions    time.Duration    `json:"interval_set_sessions"`
-	IntervalUpdateSessions time.Duration    `json:"interval_update_sessions"`
-	IntervalUpdateStatus   time.Duration    `json:"interval_update_status"`
-	Location               *geoip.Location  `json:"location"`
-	Moniker                string           `json:"moniker"`
-	Operator               sdk.AccAddress   `json:"operator"`
-	Peers                  int              `json:"peers"`
-	GigabytePrices         sdk.Coins        `json:"gigabyte_prices"`
-	HourlyPrices           sdk.Coins        `json:"hourly_prices"`
-	QOS                    *QOS             `json:"qos"`
-	Type                   ServiceType      `json:"type"`
-	Version                string           `json:"version"`
+	Addr           sentinelhub.NodeAddress `json:"addr"`
+	Bandwidth      *BandwidthInfo          `json:"bandwidth"`
+	GigabytePrices v1.Prices               `json:"gigabyte_prices"`
+	Handshake      *HandshakeInfo          `json:"handshake"`
+	HourlyPrices   v1.Prices               `json:"hourly_prices"`
+	Location       *geoip.Location         `json:"location"`
+	Moniker        string                  `json:"moniker"`
+	Peers          int                     `json:"peers"`
+	QOS            *QOSInfo                `json:"qos"`
+	Type           ServiceType             `json:"type"`
+	Version        string                  `json:"version"`
 }

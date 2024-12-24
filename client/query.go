@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	abcitypes "github.com/cometbft/cometbft/abci/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/libs/bytes"
 	"github.com/cometbft/cometbft/rpc/client"
-	coretypes "github.com/cometbft/cometbft/rpc/core/types"
+	core "github.com/cometbft/cometbft/rpc/core/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/v2fly/v2ray-core/v5/common/retry"
 )
@@ -17,8 +17,8 @@ import (
 // ABCIQueryWithOptions performs an ABCI query with configurable options.
 // It retries the query in case of failures based on the Client's retry configuration.
 // Returns the ABCI query response or an error.
-func (c *Client) ABCIQueryWithOptions(ctx context.Context, path string, data bytes.HexBytes) (*abcitypes.ResponseQuery, error) {
-	var result *coretypes.ResultABCIQuery
+func (c *Client) ABCIQueryWithOptions(ctx context.Context, path string, data bytes.HexBytes) (*abci.ResponseQuery, error) {
+	var result *core.ResultABCIQuery
 
 	// Define the function to perform the ABCI query.
 	fn := func() error {
@@ -60,7 +60,7 @@ func (c *Client) ABCIQueryWithOptions(ctx context.Context, path string, data byt
 // QueryKey performs an ABCI query for a specific key in a store.
 // Constructs the query path and delegates the query to ABCIQueryWithOptions.
 // Returns the query response or an error.
-func (c *Client) QueryKey(ctx context.Context, store string, data bytes.HexBytes) (*abcitypes.ResponseQuery, error) {
+func (c *Client) QueryKey(ctx context.Context, store string, data bytes.HexBytes) (*abci.ResponseQuery, error) {
 	// Construct the path for querying the key.
 	path := fmt.Sprintf("/store/%s/key", store)
 
@@ -71,7 +71,7 @@ func (c *Client) QueryKey(ctx context.Context, store string, data bytes.HexBytes
 // QuerySubspace performs an ABCI query for a subspace in a store.
 // Constructs the query path and delegates the query to ABCIQueryWithOptions.
 // Returns the query response or an error.
-func (c *Client) QuerySubspace(ctx context.Context, store string, data bytes.HexBytes) (*abcitypes.ResponseQuery, error) {
+func (c *Client) QuerySubspace(ctx context.Context, store string, data bytes.HexBytes) (*abci.ResponseQuery, error) {
 	// Construct the path for querying the subspace.
 	path := fmt.Sprintf("/store/%s/subspace", store)
 
@@ -84,7 +84,7 @@ func (c *Client) QuerySubspace(ctx context.Context, store string, data bytes.Hex
 // Returns an error if any step fails.
 func (c *Client) QueryGRPC(ctx context.Context, method string, req, resp codec.ProtoMarshaler) error {
 	// Marshal the request into bytes.
-	data, err := c.Marshal(req)
+	data, err := c.protoCodec.Marshal(req)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (c *Client) QueryGRPC(ctx context.Context, method string, req, resp codec.P
 	}
 
 	// Unmarshal the response value into the provided response object.
-	if err := c.Unmarshal(reply.Value, resp); err != nil {
+	if err := c.protoCodec.Unmarshal(reply.Value, resp); err != nil {
 		return err
 	}
 

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/cosmos/cosmos-sdk/types/query"
-	base "github.com/sentinel-official/hub/v12/types"
-	v1base "github.com/sentinel-official/hub/v12/types/v1"
+	"github.com/sentinel-official/hub/v12/types"
+	"github.com/sentinel-official/hub/v12/types/v1"
 	"github.com/sentinel-official/hub/v12/x/plan/types/v3"
 )
 
@@ -34,7 +34,7 @@ func (c *Client) Plan(ctx context.Context, id uint64) (res *v3.Plan, err error) 
 
 // Plans retrieves a paginated list of plans filtered by their status.
 // Returns the plans, pagination details, and any error encountered.
-func (c *Client) Plans(ctx context.Context, status v1base.Status, pageReq *query.PageRequest) (res []v3.Plan, pageRes *query.PageResponse, err error) {
+func (c *Client) Plans(ctx context.Context, status v1.Status, pageReq *query.PageRequest) (res []v3.Plan, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QueryPlansResponse
 		req  = &v3.QueryPlansRequest{
@@ -54,7 +54,7 @@ func (c *Client) Plans(ctx context.Context, status v1base.Status, pageReq *query
 // PlansForProvider retrieves a list of plans associated with a specific provider address.
 // Filters results by status and supports pagination.
 // Returns the plans, pagination details, and any error encountered.
-func (c *Client) PlansForProvider(ctx context.Context, provAddr base.ProvAddress, status v1base.Status, pageReq *query.PageRequest) (res []v3.Plan, pageRes *query.PageResponse, err error) {
+func (c *Client) PlansForProvider(ctx context.Context, provAddr types.ProvAddress, status v1.Status, pageReq *query.PageRequest) (res []v3.Plan, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QueryPlansForProviderResponse
 		req  = &v3.QueryPlansForProviderRequest{

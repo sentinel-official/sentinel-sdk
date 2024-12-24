@@ -8,8 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	cosmossdk "github.com/cosmos/cosmos-sdk/types"
-	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	"github.com/cosmos/cosmos-sdk/types"
 )
 
 // contextKey is a custom type used as a key to store the Client struct in a context.
@@ -20,35 +19,31 @@ const ContextKey contextKey = 0
 
 // Client contains all necessary components for transaction handling, query management, and configuration settings.
 type Client struct {
-	codec.ProtoCodecMarshaler // Used for marshaling and unmarshaling protobuf data
-	client.TxConfig           // Configuration related to transactions (e.g., signing modes)
-	chainID                   string
-	keyring                   keyring.Keyring
-	logger                    log.Logger
-	queryHeight               int64                // Query height for blockchain data
-	queryMaxRetries           int                  // Maximum number of retries for queries
-	queryProve                bool                 // Flag indicating whether to prove queries
-	queryRetryDelay           time.Duration        // Delay between query retries
-	rpcAddr                   string               // RPC server address
-	rpcTimeout                time.Duration        // RPC timeout duration
-	txFeeGranterAddr          cosmossdk.AccAddress // Address that grants transaction fees
-	txFees                    cosmossdk.Coins      // Fees for transactions
-	txFromName                string               // Sender name for transactions
-	txGasAdjustment           float64              // Adjustment factor for gas estimation
-	txGasPrices               cosmossdk.DecCoins   // Gas price settings for transactions
-	txGas                     uint64               // Gas limit for transactions
-	txMemo                    string               // Memo attached to transactions
-	txSimulateAndExecute      bool                 // Flag for simulating and executing transactions
-	txTimeoutHeight           uint64               // Transaction timeout height
+	chainID              string                    // The chain ID used to identify the blockchain network
+	keyring              keyring.Keyring           // Keyring for managing private keys and signatures
+	logger               log.Logger                // Embedded logger
+	protoCodec           codec.ProtoCodecMarshaler // Used for marshaling and unmarshaling protobuf data
+	queryHeight          int64                     // Query height for blockchain data
+	queryMaxRetries      int                       // Maximum number of retries for queries
+	queryProve           bool                      // Flag indicating whether to prove queries
+	queryRetryDelay      time.Duration             // Delay between query retries
+	rpcAddr              string                    // RPC server address
+	rpcTimeout           time.Duration             // RPC timeout duration
+	txConfig             client.TxConfig           // Configuration related to transactions (e.g., signing modes)
+	txFeeGranterAddr     types.AccAddress          // Address that grants transaction fees
+	txFees               types.Coins               // Fees for transactions
+	txFromName           string                    // Sender name for transactions
+	txGasAdjustment      float64                   // Adjustment factor for gas estimation
+	txGasPrices          types.DecCoins            // Gas price settings for transactions
+	txGas                uint64                    // Gas limit for transactions
+	txMemo               string                    // Memo attached to transactions
+	txSimulateAndExecute bool                      // Flag for simulating and executing transactions
+	txTimeoutHeight      uint64                    // Transaction timeout height
 }
 
-// New initializes a new Client instance with the given ProtoCodecMarshaler.
-// It sets up default transaction configuration.
-func New(protoCodec codec.ProtoCodecMarshaler) *Client {
-	return &Client{
-		ProtoCodecMarshaler: protoCodec,
-		TxConfig:            authtx.NewTxConfig(protoCodec, authtx.DefaultSignModes),
-	}
+// New initializes a new Client instance.
+func New() *Client {
+	return &Client{}
 }
 
 // WithChainID sets the blockchain chain ID and returns the updated Client.
@@ -66,6 +61,12 @@ func (c *Client) WithKeyring(keyring keyring.Keyring) *Client {
 // WithLogger assigns a logger instance to the Client and returns the updated Client.
 func (c *Client) WithLogger(logger log.Logger) *Client {
 	c.logger = logger
+	return c
+}
+
+// WithProtoCodec sets the protobuf codec and returns the updated Client.
+func (c *Client) WithProtoCodec(protoCodec codec.ProtoCodecMarshaler) *Client {
+	c.protoCodec = protoCodec
 	return c
 }
 
@@ -99,14 +100,20 @@ func (c *Client) WithRPCTimeout(timeout time.Duration) *Client {
 	return c
 }
 
+// WithTxConfig sets the transaction configuration and returns the updated Client.
+func (c *Client) WithTxConfig(txConfig client.TxConfig) *Client {
+	c.txConfig = txConfig
+	return c
+}
+
 // WithTxFeeGranterAddr sets the transaction fee granter address and returns the updated Client.
-func (c *Client) WithTxFeeGranterAddr(addr cosmossdk.AccAddress) *Client {
+func (c *Client) WithTxFeeGranterAddr(addr types.AccAddress) *Client {
 	c.txFeeGranterAddr = addr
 	return c
 }
 
 // WithTxFees assigns transaction fees and returns the updated Client.
-func (c *Client) WithTxFees(fees cosmossdk.Coins) *Client {
+func (c *Client) WithTxFees(fees types.Coins) *Client {
 	c.txFees = fees
 	return c
 }
@@ -124,7 +131,7 @@ func (c *Client) WithTxGasAdjustment(adjustment float64) *Client {
 }
 
 // WithTxGasPrices sets the gas prices for transactions and returns the updated Client.
-func (c *Client) WithTxGasPrices(prices cosmossdk.DecCoins) *Client {
+func (c *Client) WithTxGasPrices(prices types.DecCoins) *Client {
 	c.txGasPrices = prices
 	return c
 }

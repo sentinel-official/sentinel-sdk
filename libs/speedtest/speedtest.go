@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	sdkmath "cosmossdk.io/math"
+	"cosmossdk.io/math"
 	"github.com/showwin/speedtest-go/speedtest"
 )
 
@@ -31,20 +31,20 @@ func performTests(target *speedtest.Server) error {
 }
 
 // Run performs a speed test and returns download and upload speeds.
-func Run() (dlSpeed, ulSpeed sdkmath.Int, err error) {
+func Run() (dlSpeed, ulSpeed math.Int, err error) {
 	// Create a new Speedtest client
 	st := speedtest.New()
 
 	// Fetch the list of servers from the Speedtest service
 	servers, err := st.FetchServers()
 	if err != nil {
-		return sdkmath.ZeroInt(), sdkmath.ZeroInt(), err
+		return math.Int{}, math.Int{}, err
 	}
 
 	// Find the best server from the list
 	targets, err := servers.FindServer(nil)
 	if err != nil {
-		return sdkmath.ZeroInt(), sdkmath.ZeroInt(), err
+		return math.Int{}, math.Int{}, err
 	}
 
 	// Iterate through the list of target servers to find a valid result
@@ -55,20 +55,20 @@ func Run() (dlSpeed, ulSpeed sdkmath.Int, err error) {
 			continue
 		}
 
-		// Convert download and upload speeds to sdkmath.LegacyDec
-		dlSpeedDec, err := sdkmath.LegacyNewDecFromStr(fmt.Sprintf("%f", target.DLSpeed))
+		// Convert download and upload speeds to math.LegacyDec
+		dlSpeedDec, err := math.LegacyNewDecFromStr(fmt.Sprintf("%f", target.DLSpeed))
 		if err != nil {
 			target.Context.Reset()
 			continue
 		}
 
-		ulSpeedDec, err := sdkmath.LegacyNewDecFromStr(fmt.Sprintf("%f", target.ULSpeed))
+		ulSpeedDec, err := math.LegacyNewDecFromStr(fmt.Sprintf("%f", target.ULSpeed))
 		if err != nil {
 			target.Context.Reset()
 			continue
 		}
 
-		// Convert LegacyDec to sdkmath.Int
+		// Convert LegacyDec to math.Int
 		dlSpeed := dlSpeedDec.RoundInt()
 		ulSpeed := ulSpeedDec.RoundInt()
 
@@ -83,5 +83,5 @@ func Run() (dlSpeed, ulSpeed sdkmath.Int, err error) {
 	}
 
 	// Return an error if no valid result was found
-	return sdkmath.ZeroInt(), sdkmath.ZeroInt(), errors.New("no server provided valid results")
+	return math.Int{}, math.Int{}, errors.New("no server provided valid results")
 }

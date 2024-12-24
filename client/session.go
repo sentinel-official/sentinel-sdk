@@ -5,7 +5,7 @@ import (
 
 	cosmossdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
-	base "github.com/sentinel-official/hub/v12/types"
+	sentinelhub "github.com/sentinel-official/hub/v12/types"
 	"github.com/sentinel-official/hub/v12/x/session/types/v3"
 )
 
@@ -33,7 +33,7 @@ func (c *Client) Session(ctx context.Context, id uint64) (res v3.Session, err er
 	}
 
 	// Unpack the session data from the response.
-	if err := c.UnpackAny(resp.Session, &res); err != nil {
+	if err := c.protoCodec.UnpackAny(resp.Session, &res); err != nil {
 		return nil, err
 	}
 
@@ -56,7 +56,7 @@ func (c *Client) Sessions(ctx context.Context, pageReq *query.PageRequest) (res 
 	// Unpack each session from the response.
 	res = make([]v3.Session, len(resp.Sessions))
 	for i := 0; i < len(resp.Sessions); i++ {
-		if err := c.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
+		if err := c.protoCodec.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -83,7 +83,7 @@ func (c *Client) SessionsForAccount(ctx context.Context, accAddr cosmossdk.AccAd
 	// Unpack each session from the response.
 	res = make([]v3.Session, len(resp.Sessions))
 	for i := 0; i < len(resp.Sessions); i++ {
-		if err := c.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
+		if err := c.protoCodec.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -93,7 +93,7 @@ func (c *Client) SessionsForAccount(ctx context.Context, accAddr cosmossdk.AccAd
 
 // SessionsForNode retrieves sessions associated with a specific node address.
 // Returns the sessions, pagination details, and any error encountered.
-func (c *Client) SessionsForNode(ctx context.Context, nodeAddr base.NodeAddress, pageReq *query.PageRequest) (res []v3.Session, pageRes *query.PageResponse, err error) {
+func (c *Client) SessionsForNode(ctx context.Context, nodeAddr sentinelhub.NodeAddress, pageReq *query.PageRequest) (res []v3.Session, pageRes *query.PageResponse, err error) {
 	var (
 		resp v3.QuerySessionsForNodeResponse
 		req  = &v3.QuerySessionsForNodeRequest{
@@ -110,7 +110,7 @@ func (c *Client) SessionsForNode(ctx context.Context, nodeAddr base.NodeAddress,
 	// Unpack each session from the response.
 	res = make([]v3.Session, len(resp.Sessions))
 	for i := 0; i < len(resp.Sessions); i++ {
-		if err := c.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
+		if err := c.protoCodec.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -137,7 +137,7 @@ func (c *Client) SessionsForSubscription(ctx context.Context, id uint64, pageReq
 	// Unpack each session from the response.
 	res = make([]v3.Session, len(resp.Sessions))
 	for i := 0; i < len(resp.Sessions); i++ {
-		if err := c.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
+		if err := c.protoCodec.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -165,7 +165,7 @@ func (c *Client) SessionsForSubscriptionAllocation(ctx context.Context, id uint6
 	// Unpack each session from the response.
 	res = make([]v3.Session, len(resp.Sessions))
 	for i := 0; i < len(resp.Sessions); i++ {
-		if err := c.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
+		if err := c.protoCodec.UnpackAny(resp.Sessions[i], &res[i]); err != nil {
 			return nil, nil, err
 		}
 	}

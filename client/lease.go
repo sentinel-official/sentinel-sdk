@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/cosmos/cosmos-sdk/types/query"
-	base "github.com/sentinel-official/hub/v12/types"
+	"github.com/sentinel-official/hub/v12/types"
 	"github.com/sentinel-official/hub/v12/x/lease/types/v1"
 )
 
@@ -50,7 +50,7 @@ func (c *Client) Leases(ctx context.Context, pageReq *query.PageRequest) (res []
 
 // LeasesForNode retrieves leases associated with a specific node address.
 // Returns the leases, pagination details, and any error encountered.
-func (c *Client) LeasesForNode(ctx context.Context, nodeAddr base.NodeAddress, pageReq *query.PageRequest) (res []v1.Lease, pageRes *query.PageResponse, err error) {
+func (c *Client) LeasesForNode(ctx context.Context, nodeAddr types.NodeAddress, pageReq *query.PageRequest) (res []v1.Lease, pageRes *query.PageResponse, err error) {
 	var (
 		resp v1.QueryLeasesForNodeResponse
 		req  = &v1.QueryLeasesForNodeRequest{
@@ -69,7 +69,7 @@ func (c *Client) LeasesForNode(ctx context.Context, nodeAddr base.NodeAddress, p
 
 // LeasesForProvider retrieves leases associated with a specific provider address.
 // Returns the leases, pagination details, and any error encountered.
-func (c *Client) LeasesForProvider(ctx context.Context, provAddr base.ProvAddress, pageReq *query.PageRequest) (res []v1.Lease, pageRes *query.PageResponse, err error) {
+func (c *Client) LeasesForProvider(ctx context.Context, provAddr types.ProvAddress, pageReq *query.PageRequest) (res []v1.Lease, pageRes *query.PageResponse, err error) {
 	var (
 		resp v1.QueryLeasesForProviderResponse
 		req  = &v1.QueryLeasesForProviderRequest{

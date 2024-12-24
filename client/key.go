@@ -1,9 +1,9 @@
 package client
 
 import (
-	cryptohd "github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	"github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/go-bip39"
 )
 
@@ -15,7 +15,7 @@ func (c *Client) Key(name string) (*keyring.Record, error) {
 
 // Sign signs the provided data using the key from the keyring identified by the given name.
 // Returns the signed bytes, the public key, and any error encountered.
-func (c *Client) Sign(name string, buf []byte) ([]byte, cryptotypes.PubKey, error) {
+func (c *Client) Sign(name string, buf []byte) ([]byte, types.PubKey, error) {
 	return c.keyring.Sign(name, buf)
 }
 
@@ -62,8 +62,8 @@ func (c *Client) CreateKey(name, mnemonic, bip39Pass string, coinType, account, 
 	}
 
 	// Create an HD path for the key.
-	hdPath := cryptohd.CreateHDPath(coinType, account, index)
-	signAlgo := cryptohd.Secp256k1
+	hdPath := hd.CreateHDPath(coinType, account, index)
+	signAlgo := hd.Secp256k1
 
 	// Create a new key in the keyring.
 	key, err := c.keyring.NewAccount(name, mnemonic, bip39Pass, hdPath.String(), signAlgo)
