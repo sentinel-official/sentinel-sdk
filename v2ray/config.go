@@ -15,16 +15,7 @@ var fs embed.FS
 type ClientConfig struct{}
 
 func (c *ClientConfig) WriteToFile(name string) error {
-	text, err := fs.ReadFile("client.toml.tmpl")
-	if err != nil {
-		return err
-	}
-
-	return utils.ExecTemplateToFile(string(text), c, name)
-}
-
-func (c *ClientConfig) WriteBuiltToFile(name string) error {
-	text, err := fs.ReadFile("client_built.json.tmpl")
+	text, err := fs.ReadFile("client.json.tmpl")
 	if err != nil {
 		return err
 	}
@@ -83,11 +74,15 @@ func (c *InboundServerConfig) Validate() error {
 
 // ServerConfig represents the V2Ray server configuration options.
 type ServerConfig struct {
-	Inbounds []*InboundServerConfig `mapstructure:"inbounds"`
+	Inbounds []InboundServerConfig `mapstructure:"inbounds"`
 }
 
 // Validate validates the ServerConfig fields.
 func (c *ServerConfig) Validate() error {
+	if len(c.Inbounds) == 0 {
+		return errors.New("inbounds cannot be empty")
+	}
+
 	portSet := make(map[uint16]bool)
 	tagSet := make(map[string]bool)
 
@@ -115,7 +110,7 @@ func (c *ServerConfig) Validate() error {
 }
 
 func (c *ServerConfig) WriteToFile(name string) error {
-	text, err := fs.ReadFile("server.toml.tmpl")
+	text, err := fs.ReadFile("server.json.tmpl")
 	if err != nil {
 		return err
 	}
@@ -123,11 +118,25 @@ func (c *ServerConfig) WriteToFile(name string) error {
 	return utils.ExecTemplateToFile(string(text), c, name)
 }
 
-func (c *ServerConfig) WriteBuiltToFile(name string) error {
-	text, err := fs.ReadFile("server_built.json.tmpl")
-	if err != nil {
-		return err
+func DefaultServerConfig() ServerConfig {
+	return ServerConfig{
+		Inbounds: []InboundServerConfig{
+			{
+				Network:     "grpc",
+				Port:        utils.RandomPort(),
+				Protocol:    "vmess",
+				Security:    "none",
+				TLSCertPath: "",
+				TLSKeyPath:  "",
+			},
+			{
+				Network:     "tcp",
+				Port:        utils.RandomPort(),
+				Protocol:    "vmess",
+				Security:    "none",
+				TLSCertPath: "",
+				TLSKeyPath:  "",
+			},
+		},
 	}
-
-	return utils.ExecTemplateToFile(string(text), c, name)
 }

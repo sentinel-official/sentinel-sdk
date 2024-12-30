@@ -92,7 +92,7 @@ func (s *Server) PreUp(v interface{}) error {
 	}
 
 	// Writes configuration to file.
-	return cfg.WriteBuiltToFile(s.configFilePath())
+	return cfg.WriteToFile(s.configFilePath())
 }
 
 // PostUp performs operations after the server process is started.
@@ -150,8 +150,8 @@ func (s *Server) AddPeer(ctx context.Context, req interface{}) (res []byte, err 
 	}
 
 	// Append IP addresses to the response.
-	res = append(res, ipv4Addr...)
-	res = append(res, ipv6Addr...)
+	res = append(res, ipv4Addr.AsSlice()...)
+	res = append(res, ipv6Addr.AsSlice()...)
 	return res, nil
 }
 

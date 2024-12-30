@@ -4,6 +4,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"net/netip"
 	"strings"
 
 	"github.com/sentinel-official/sentinel-go-sdk/types"
@@ -23,17 +24,7 @@ func (c *ClientConfig) Validate() error {
 
 // WriteToFile writes the template to a file using the ClientConfig structure.
 func (c *ClientConfig) WriteToFile(name string) error {
-	text, err := fs.ReadFile("client.toml.tmpl")
-	if err != nil {
-		return err
-	}
-
-	return utils.ExecTemplateToFile(string(text), c, name)
-}
-
-// WriteBuiltToFile writes the built template to a file using the ClientConfig structure.
-func (c *ClientConfig) WriteBuiltToFile(name string) error {
-	text, err := fs.ReadFile("client_built.conf.tmpl")
+	text, err := fs.ReadFile("client.conf.tmpl")
 	if err != nil {
 		return err
 	}
@@ -43,22 +34,22 @@ func (c *ClientConfig) WriteBuiltToFile(name string) error {
 
 // ServerConfig represents the WireGuard server configuration.
 type ServerConfig struct {
-	IPv4CIDR     string `mapstructure:"ipv4_cidr"`
-	IPv6CIDR     string `mapstructure:"ipv6_cidr"`
+	IPv4Addr     string `mapstructure:"ipv4_addr"`
+	IPv6Addr     string `mapstructure:"ipv6_addr"`
 	Interface    string `mapstructure:"interface"`
 	ListenPort   uint16 `mapstructure:"listen_port"`
 	OutInterface string `mapstructure:"out_interface"`
 	PrivateKey   string `mapstructure:"private_key"`
 }
 
-// Address returns the combined IPv4 and IPv6 CIDRs, separated by a comma if both are present.
+// Address returns the combined IPv4 and IPv6 Addrs, separated by a comma if both are present.
 func (c *ServerConfig) Address() string {
 	var addrs []string
-	if c.IPv4CIDR != "" {
-		addrs = append(addrs, c.IPv4CIDR)
+	if c.IPv4Addr != "" {
+		addrs = append(addrs, c.IPv4Addr)
 	}
-	if c.IPv6CIDR != "" {
-		addrs = append(addrs, c.IPv6CIDR)
+	if c.IPv6Addr != "" {
+		addrs = append(addrs, c.IPv6Addr)
 	}
 
 	return strings.Join(addrs, ", ")
@@ -66,25 +57,25 @@ func (c *ServerConfig) Address() string {
 
 // Validate checks that the ServerConfig fields have valid values.
 func (c *ServerConfig) Validate() error {
-	if c.IPv4CIDR == "" && c.IPv6CIDR == "" {
-		return errors.New("either ipv4_cidr or ipv6_cidr is required")
+	if c.IPv4Addr == "" && c.IPv6Addr == "" {
+		return errors.New("either ipv4_addr or ipv6_addr is required")
 	}
-	if c.IPv4CIDR != "" {
-		cidr, err := types.NewCIDR(c.IPv4CIDR)
+	if c.IPv4Addr != "" {
+		prefix, err := types.NewNetPrefix(c.IPv4Addr)
 		if err != nil {
-			return fmt.Errorf("invalid ipv4_cidr: %w", err)
+			return fmt.Errorf("invalid ipv4_addr: %w", err)
 		}
-		if cidr.Len() > 256 {
-			return errors.New("ipv4_cidr is too large")
+		if prefix.Len() > 256 {
+			return errors.New("ipv4_addr prefix block is too large")
 		}
 	}
-	if c.IPv6CIDR != "" {
-		cidr, err := types.NewCIDR(c.IPv6CIDR)
+	if c.IPv6Addr != "" {
+		prefix, err := types.NewNetPrefix(c.IPv6Addr)
 		if err != nil {
-			return fmt.Errorf("invalid ipv6_cidr: %w", err)
+			return fmt.Errorf("invalid ipv6_addr: %w", err)
 		}
-		if cidr.Len() > 256 {
-			return errors.New("ipv6_cidr is too large")
+		if prefix.Len() > 256 {
+			return errors.New("ipv6_addr prefix block is too large")
 		}
 	}
 	if c.Interface == "" {
@@ -108,7 +99,7 @@ func (c *ServerConfig) Validate() error {
 
 // WriteToFile writes the template to a file using the ServerConfig structure.
 func (c *ServerConfig) WriteToFile(name string) error {
-	text, err := fs.ReadFile("server.toml.tmpl")
+	text, err := fs.ReadFile("server.conf.tmpl")
 	if err != nil {
 		return err
 	}
@@ -116,23 +107,36 @@ func (c *ServerConfig) WriteToFile(name string) error {
 	return utils.ExecTemplateToFile(string(text), c, name)
 }
 
-// WriteBuiltToFile writes the built template to a file using the ServerConfig structure.
-func (c *ServerConfig) WriteBuiltToFile(name string) error {
-	text, err := fs.ReadFile("server_built.conf.tmpl")
+func (c *ServerConfig) IPv4Addrs() ([]netip.Addr, error) {
+	prefix, err := types.NewNetPrefix(c.IPv4Addr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return utils.ExecTemplateToFile(string(text), c, name)
+	return prefix.Addrs()
 }
 
-func DefaultServerConfig() *ServerConfig {
-	return &ServerConfig{
-		IPv4CIDR:     "10.8.0.1/24",
-		IPv6CIDR:     "",
+func (c *ServerConfig) IPv6Addrs() ([]netip.Addr, error) {
+	prefix, err := types.NewNetPrefix(c.IPv6Addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return prefix.Addrs()
+}
+
+func DefaultServerConfig() ServerConfig {
+	pk, err := NewPrivateKey()
+	if err != nil {
+		panic(err)
+	}
+
+	return ServerConfig{
+		IPv4Addr:     "10.8.0.1/24",
+		IPv6Addr:     "",
 		Interface:    "wg0",
-		ListenPort:   51820,
+		ListenPort:   utils.RandomPort(),
 		OutInterface: "eth0",
-		PrivateKey:   "",
+		PrivateKey:   pk.String(),
 	}
 }

@@ -121,7 +121,7 @@ func (c *Client) PreUp(v interface{}) error {
 	}
 
 	// Writes configuration to file.
-	return cfg.WriteBuiltToFile(c.configFilePath())
+	return cfg.WriteToFile(c.configFilePath())
 }
 
 // Up starts the V2Ray client process.

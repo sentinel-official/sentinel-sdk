@@ -2,15 +2,15 @@ package wireguard
 
 import (
 	"fmt"
-	"net"
+	"net/netip"
 	"sync"
 )
 
 // Peer represents a network peer with identity and IP addresses.
 type Peer struct {
-	Identity string // Identity of the peer
-	IPv4Addr net.IP // IPv4 address of the peer
-	IPv6Addr net.IP // IPv6 address of the peer
+	Identity string     // Identity of the peer
+	IPv4Addr netip.Addr // IPv4 address of the peer
+	IPv6Addr netip.Addr // IPv6 address of the peer
 }
 
 // Key returns the identity of the peer as the key.
@@ -21,13 +21,13 @@ func (p *Peer) Key() string {
 // PeerManager manages a collection of Peers and their associated IP addresses.
 type PeerManager struct {
 	*sync.RWMutex                  // Read-write mutex for thread-safe access
-	IPv4Addrs     []net.IP         // Available IPv4 addresses
-	IPv6Addrs     []net.IP         // Available IPv6 addresses
+	IPv4Addrs     []netip.Addr     // Available IPv4 addresses
+	IPv6Addrs     []netip.Addr     // Available IPv6 addresses
 	m             map[string]*Peer // Map of identities to Peers
 }
 
 // NewPeerManager creates a new instance of PeerManager.
-func NewPeerManager(ipv4Addrs, ipv6Addrs []net.IP) *PeerManager {
+func NewPeerManager(ipv4Addrs, ipv6Addrs []netip.Addr) *PeerManager {
 	return &PeerManager{
 		RWMutex:   &sync.RWMutex{},
 		IPv4Addrs: ipv4Addrs,
@@ -46,18 +46,18 @@ func (pm *PeerManager) Get(v string) *Peer {
 
 // Put adds a new Peer with the given identity to the PeerManager.
 // It assigns available IPv4 and IPv6 addresses to the Peer.
-func (pm *PeerManager) Put(v string) (ipv4Addr, ipv6Addr net.IP, err error) {
+func (pm *PeerManager) Put(v string) (ipv4Addr, ipv6Addr netip.Addr, err error) {
 	pm.Lock()
 	defer pm.Unlock()
 
 	// Check if the Peer already exists
 	if _, ok := pm.m[v]; ok {
-		return nil, nil, fmt.Errorf("peer %s already exists", v)
+		return netip.Addr{}, netip.Addr{}, fmt.Errorf("peer %s already exists", v)
 	}
 
 	// Check if there are available IP addresses
 	if len(pm.IPv4Addrs) == 0 || len(pm.IPv6Addrs) == 0 {
-		return nil, nil, fmt.Errorf("no available IP addresses")
+		return netip.Addr{}, netip.Addr{}, fmt.Errorf("no available IP addresses")
 	}
 
 	// Assign the first available IPv4 and IPv6 addresses

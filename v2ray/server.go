@@ -73,8 +73,13 @@ func (s *Server) pidFilePath() string {
 
 // readPIDFromFile reads the PID from the server's PID file.
 func (s *Server) readPIDFromFile() (int32, error) {
+	name := s.pidFilePath()
+	if _, err := os.Stat(name); os.IsNotExist(err) {
+		return 0, nil
+	}
+
 	// Read PID from the PID file.
-	data, err := os.ReadFile(s.pidFilePath())
+	data, err := os.ReadFile(name)
 	if err != nil {
 		return 0, err
 	}
@@ -163,6 +168,9 @@ func (s *Server) IsUp(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if pid == 0 {
+		return false, nil
+	}
 
 	// Retrieve process with the given PID.
 	proc, err := process.NewProcessWithContext(ctx, pid)
@@ -202,7 +210,7 @@ func (s *Server) PreUp(v interface{}) error {
 	}
 
 	// Write configuration to file.
-	return cfg.WriteBuiltToFile(s.configFilePath())
+	return cfg.WriteToFile(s.configFilePath())
 }
 
 // Up starts the V2Ray server process.

@@ -65,7 +65,7 @@ func (c *Client) PreUp(v interface{}) error {
 		return fmt.Errorf("invalid parameter type %T", v)
 	}
 
-	return cfg.WriteBuiltToFile(c.configFilePath())
+	return cfg.WriteToFile(c.configFilePath())
 }
 
 // PostUp performs operations after the client process is started.
