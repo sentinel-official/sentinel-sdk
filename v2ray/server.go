@@ -112,11 +112,9 @@ func (s *Server) clientConn() (*grpc.ClientConn, error) {
 	target := "127.0.0.1:23"
 
 	// Establish a gRPC client connection with specified options:
-	// - WithBlock: Blocks until the underlying connection is established.
 	// - WithTransportCredentials: Configures insecure transport credentials for the connection.
-	return grpc.Dial(
+	return grpc.NewClient(
 		target,
-		grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 }
