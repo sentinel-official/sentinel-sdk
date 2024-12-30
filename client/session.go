@@ -29,7 +29,7 @@ func (c *Client) Session(ctx context.Context, id uint64) (res v3.Session, err er
 
 	// Perform the gRPC query to fetch the session details.
 	if err := c.QueryGRPC(ctx, methodQuerySession, req, &resp); err != nil {
-		return nil, err
+		return nil, IsNotFoundError(err)
 	}
 
 	// Unpack the session data from the response.

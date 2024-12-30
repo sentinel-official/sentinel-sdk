@@ -25,7 +25,7 @@ func (c *Client) Provider(ctx context.Context, provAddr types.ProvAddress) (res 
 
 	// Perform the gRPC query to fetch the provider details.
 	if err := c.QueryGRPC(ctx, methodQueryProvider, req, &resp); err != nil {
-		return nil, err
+		return nil, IsNotFoundError(err)
 	}
 
 	return &resp.Provider, nil

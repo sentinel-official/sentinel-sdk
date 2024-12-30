@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -13,6 +14,16 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/v2fly/v2ray-core/v5/common/retry"
 )
+
+// IsNotFoundError checks if the given error string indicates a gRPC NotFound error.
+func IsNotFoundError(err error) error {
+	// Check if the error string contains "rpc error: code = NotFound"
+	if strings.Contains(err.Error(), "rpc error: code = NotFound") {
+		return nil
+	}
+
+	return err
+}
 
 // ABCIQueryWithOptions performs an ABCI query with configurable options.
 // It retries the query in case of failures based on the Client's retry configuration.
@@ -44,8 +55,8 @@ func (c *Client) ABCIQueryWithOptions(ctx context.Context, path string, data byt
 	}
 
 	// Retry the query using the configured maximum retries and delay.
-	retryDelay := uint32(c.queryRetryDelay / time.Millisecond)
-	if err := retry.Timed(c.queryMaxRetries, retryDelay).On(fn); err != nil {
+	delay := uint32(c.queryRetryDelay / time.Millisecond)
+	if err := retry.Timed(c.queryMaxRetries, delay).On(fn); err != nil {
 		return nil, err
 	}
 
@@ -98,6 +109,9 @@ func (c *Client) QueryGRPC(ctx context.Context, method string, req, resp codec.P
 	// Check for a nil reply.
 	if reply == nil {
 		return errors.New("nil reply")
+	}
+	if reply.IsErr() {
+		return errors.New(reply.Log)
 	}
 
 	// Unmarshal the response value into the provided response object.
