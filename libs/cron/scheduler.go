@@ -66,12 +66,12 @@ func (s *Scheduler) RegisterWorkers(workers ...Worker) error {
 	defer s.mu.Unlock()
 
 	if s.isRunning {
-		return errors.New("cannot add new workers while scheduler is running")
+		return errors.New("scheduler is already running")
 	}
 
 	for _, w := range workers {
 		if _, exists := s.workers[w.Name()]; exists {
-			return fmt.Errorf("worker with name %q already exists", w.Name())
+			return fmt.Errorf("duplicate worker %s", w.Name())
 		}
 
 		s.workers[w.Name()] = w
@@ -82,30 +82,30 @@ func (s *Scheduler) RegisterWorkers(workers ...Worker) error {
 
 // runWorker continuously executes a worker's function and handles errors.
 func (s *Scheduler) runWorker(w Worker) {
-	defer s.wg.Done()
+	defer func() {
+		w.OnExit()
+		s.wg.Done()
+	}()
 
-	retries := 0
-	for {
+	for retries := 0; ; {
 		select {
 		case <-s.stopSignal:
 			return
 		default:
 			if err := w.Run(); err != nil {
-				if w.OnError(err) {
+				if stop := w.OnError(err); stop {
 					return
 				}
-				if retries < w.MaxRetries() {
-					retries++
-					continue
+
+				retries++
+				if retries == w.MaxRetries() {
+					return
 				}
 			} else {
 				retries = 0
-			}
 
-			// Sleep before the next execution if the interval is positive.
-			interval := w.Interval()
-			if interval > 0 {
-				time.Sleep(interval)
+				// Sleep before the next execution.
+				time.Sleep(w.Interval())
 			}
 		}
 	}

@@ -10,6 +10,7 @@ type Worker interface {
 	MaxRetries() int               // Returns the maximum number of retry attempts for the worker.
 	Name() string                  // Returns the name of the worker.
 	OnError(err error) (stop bool) // Handles errors that occur during worker execution. Returns true to stop the worker, false otherwise.
+	OnExit()                       // Called when the worker stops to perform cleanup actions.
 	Run() error                    // Executes the worker and returns an error if it fails.
 }
 
@@ -23,6 +24,7 @@ type BasicWorker struct {
 	maxRetries int
 	name       string
 	onError    func(error) bool
+	onExit     func()
 }
 
 // NewBasicWorker creates a new BasicWorker with default settings.
@@ -30,6 +32,7 @@ func NewBasicWorker() *BasicWorker {
 	return &BasicWorker{
 		maxRetries: 5,
 		onError:    func(error) bool { return false },
+		onExit:     func() {},
 	}
 }
 
@@ -63,6 +66,12 @@ func (bw *BasicWorker) WithOnError(onError func(error) bool) *BasicWorker {
 	return bw
 }
 
+// WithOnExit sets the function to be called when the worker stops.
+func (bw *BasicWorker) WithOnExit(onExit func()) *BasicWorker {
+	bw.onExit = onExit
+	return bw
+}
+
 // Interval returns the interval at which the worker should be executed.
 func (bw *BasicWorker) Interval() time.Duration {
 	return bw.interval
@@ -80,7 +89,18 @@ func (bw *BasicWorker) Name() string {
 
 // OnError processes errors encountered during worker execution.
 func (bw *BasicWorker) OnError(err error) bool {
-	return bw.onError(err)
+	if bw.onError != nil {
+		return bw.onError(err)
+	}
+
+	return false
+}
+
+// OnExit calls the onExit function if it is set.
+func (bw *BasicWorker) OnExit() {
+	if bw.onExit != nil {
+		bw.onExit()
+	}
 }
 
 // Run executes the worker's handler function and returns any error encountered.
