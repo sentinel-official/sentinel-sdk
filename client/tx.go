@@ -13,17 +13,32 @@ import (
 	auth "github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 
+const (
+	// gRPC methods for simulating the transaction
+	methodSimulate = "/cosmos.tx.v1beta1.Service/Simulate"
+)
+
+// calculateFees computes transaction fees based on gas prices and gas limit.
+func calculateFees(gasPrices cosmossdk.DecCoins, gasLimit uint64) cosmossdk.Coins {
+	fees := make(cosmossdk.Coins, len(gasPrices))
+	for i, price := range gasPrices {
+		fee := price.Amount.MulInt64(int64(gasLimit))
+		fees[i] = cosmossdk.NewCoin(price.Denom, fee.Ceil().RoundInt())
+	}
+
+	return fees
+}
+
 // Simulate simulates the execution of a transaction before broadcasting it.
 // Takes transaction bytes as input and returns the simulation response or an error.
 func (c *Client) Simulate(ctx context.Context, buf []byte) (*tx.SimulateResponse, error) {
 	var (
-		resp   tx.SimulateResponse
-		method = "/cosmos.tx.v1beta1.Service/Simulate"
-		req    = &tx.SimulateRequest{TxBytes: buf}
+		resp tx.SimulateResponse
+		req  = &tx.SimulateRequest{TxBytes: buf}
 	)
 
 	// Perform a gRPC query to simulate the transaction.
-	if err := c.QueryGRPC(ctx, method, req, &resp); err != nil {
+	if err := c.QueryGRPC(ctx, methodSimulate, req, &resp); err != nil {
 		return nil, err
 	}
 
@@ -142,6 +157,11 @@ func (c *Client) prepareTx(ctx context.Context, key *keyring.Record, account aut
 	txb.SetMemo(c.txMemo)
 	txb.SetTimeoutHeight(c.txTimeoutHeight)
 
+	if !c.txGasPrices.IsZero() {
+		fees := calculateFees(c.txGasPrices, c.txGas)
+		txb.SetFeeAmount(fees)
+	}
+
 	// Retrieve the public key from the key record.
 	pubKey, err := key.GetPubKey()
 	if err != nil {
@@ -167,7 +187,12 @@ func (c *Client) prepareTx(ctx context.Context, key *keyring.Record, account aut
 		if err != nil {
 			return nil, err
 		}
+
 		txb.SetGasLimit(gasLimit)
+		if !c.txGasPrices.IsZero() {
+			fees := calculateFees(c.txGasPrices, c.txGas)
+			txb.SetFeeAmount(fees)
+		}
 	}
 
 	return txb, nil
