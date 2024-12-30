@@ -2,6 +2,7 @@ package log
 
 import (
 	"io"
+	"time"
 
 	"cosmossdk.io/log"
 	"github.com/cometbft/cometbft/config"
@@ -19,6 +20,7 @@ func NewLogger(w io.Writer, format, level string) (log.Logger, error) {
 	// Prepare options for logger
 	opts := []log.Option{
 		log.LevelOption(logLevel),
+		log.TimeFormatOption(time.RFC3339),
 	}
 
 	// Set log format based on the provided format string
