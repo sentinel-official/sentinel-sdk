@@ -9,6 +9,7 @@ import (
 
 var funcMap = template.FuncMap{
 	"join": strings.Join,
+	"sum":  func(x, y int) int { return x + y },
 }
 
 // ExecTemplateToFile generates content from a template and writes it to a file.

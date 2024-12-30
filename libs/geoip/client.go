@@ -2,6 +2,8 @@ package geoip
 
 import (
 	"time"
+
+	"github.com/sentinel-official/sentinel-go-sdk/utils"
 )
 
 // Location represents geographical location information associated with an IP address.
@@ -11,6 +13,10 @@ type Location struct {
 	IP        string  `json:"ip,omitempty"`        // IP address that was resolved.
 	Latitude  float64 `json:"latitude,omitempty"`  // Latitude of the location.
 	Longitude float64 `json:"longitude,omitempty"` // Longitude of the location.
+}
+
+func (l *Location) String() string {
+	return string(utils.MustMarshalJSON(l))
 }
 
 // Client is an interface for resolving IP addresses into location data.
