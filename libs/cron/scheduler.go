@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/avast/retry-go/v4"
 )
 
 // Scheduler manages the scheduling and execution of workers.
@@ -87,26 +89,23 @@ func (s *Scheduler) runWorker(w Worker) {
 		s.wg.Done()
 	}()
 
-	for retries := 0; ; {
+	for {
+		// Attempt the worker's run function with retries
+		if err := retry.Do(
+			w.Run,
+			retry.Attempts(w.Retries()),
+			retry.Delay(w.RetryDelay()),
+			retry.OnRetry(w.OnRetry),
+			retry.LastErrorOnly(true),
+		); err != nil && w.OnError(err) {
+			return
+		}
+
+		// Sleep for the interval—or stop early if we receive a stopSignal
 		select {
 		case <-s.stopSignal:
 			return
-		default:
-			if err := w.Run(); err != nil {
-				if stop := w.OnError(err); stop {
-					return
-				}
-
-				retries++
-				if retries == w.MaxRetries() {
-					return
-				}
-			} else {
-				retries = 0
-
-				// Sleep before the next execution.
-				time.Sleep(w.Interval())
-			}
+		case <-time.After(w.Interval()):
 		}
 	}
 }
