@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
+	"github.com/avast/retry-go/v4"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/libs/bytes"
 	"github.com/cometbft/cometbft/rpc/client"
 	core "github.com/cometbft/cometbft/rpc/core/types"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/v2fly/v2ray-core/v5/common/retry"
 )
 
 // IsNotFoundError checks if the given error string indicates a gRPC NotFound error.
@@ -32,7 +31,7 @@ func (c *Client) ABCIQueryWithOptions(ctx context.Context, path string, data byt
 	var result *core.ResultABCIQuery
 
 	// Define the function to perform the ABCI query.
-	fn := func() error {
+	queryFunc := func() error {
 		// Get the RPC client for querying.
 		http, err := c.HTTP()
 		if err != nil {
@@ -55,8 +54,13 @@ func (c *Client) ABCIQueryWithOptions(ctx context.Context, path string, data byt
 	}
 
 	// Retry the query using the configured maximum retries and delay.
-	delay := uint32(c.queryRetryDelay / time.Millisecond)
-	if err := retry.Timed(c.queryMaxRetries, delay).On(fn); err != nil {
+	if err := retry.Do(
+		queryFunc,
+		retry.Attempts(c.queryRetries),
+		retry.Delay(c.queryRetryDelay),
+		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true),
+	); err != nil {
 		return nil, err
 	}
 

@@ -95,6 +95,7 @@ func (s *Scheduler) runWorker(w Worker) {
 			w.Run,
 			retry.Attempts(w.Retries()),
 			retry.Delay(w.RetryDelay()),
+			retry.DelayType(retry.FixedDelay),
 			retry.OnRetry(w.OnRetry),
 			retry.LastErrorOnly(true),
 		); err != nil && w.OnError(err) {

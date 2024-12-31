@@ -24,8 +24,8 @@ type Client struct {
 	logger               log.Logger                // Embedded logger
 	protoCodec           codec.ProtoCodecMarshaler // Used for marshaling and unmarshaling protobuf data
 	queryHeight          int64                     // Query height for blockchain data
-	queryMaxRetries      int                       // Maximum number of retries for queries
 	queryProve           bool                      // Flag indicating whether to prove queries
+	queryRetries         uint                      // Number of retries for queries
 	queryRetryDelay      time.Duration             // Delay between query retries
 	rpcAddr              string                    // RPC server address
 	rpcTimeout           time.Duration             // RPC timeout duration
@@ -70,15 +70,15 @@ func (c *Client) WithProtoCodec(protoCodec codec.ProtoCodecMarshaler) *Client {
 	return c
 }
 
-// WithQueryMaxRetries sets the maximum number of retries for queries and returns the updated Client.
-func (c *Client) WithQueryMaxRetries(maxRetries int) *Client {
-	c.queryMaxRetries = maxRetries
-	return c
-}
-
 // WithQueryProve sets the prove flag for queries and returns the updated Client.
 func (c *Client) WithQueryProve(prove bool) *Client {
 	c.queryProve = prove
+	return c
+}
+
+// WithQueryRetries sets the number of retries for queries and returns the updated Client.
+func (c *Client) WithQueryRetries(retries uint) *Client {
+	c.queryRetries = retries
 	return c
 }
 
