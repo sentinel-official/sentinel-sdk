@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/sentinel-official/sentinel-go-sdk/types"
 	"github.com/sentinel-official/sentinel-go-sdk/utils"
 )
 
@@ -26,11 +27,20 @@ func (c *ClientConfig) WriteToFile(name string) error {
 // InboundServerConfig represents the V2Ray inbound server configuration options.
 type InboundServerConfig struct {
 	Network     string `mapstructure:"network"`
-	Port        uint16 `mapstructure:"port"`
+	Port        string `mapstructure:"port"`
 	Protocol    string `mapstructure:"protocol"`
 	Security    string `mapstructure:"security"`
 	TLSCertPath string `mapstructure:"tls_cert_path"`
 	TLSKeyPath  string `mapstructure:"tls_key_path"`
+}
+
+func (c *InboundServerConfig) ListenPort() string {
+	v, err := types.NewPortFromString(c.Port)
+	if err != nil {
+		panic(err)
+	}
+
+	return fmt.Sprintf("%d-%d", v.InFrom, v.InTo)
 }
 
 // Tag creates a Tag instance based on the InboundServerConfig configuration.
@@ -48,24 +58,30 @@ func (c *InboundServerConfig) Tag() *Tag {
 
 // Validate validates the InboundServerConfig fields.
 func (c *InboundServerConfig) Validate() error {
-	network := NewNetworkFromString(c.Network)
-	if !network.IsValid() {
-		return fmt.Errorf("invalid network %s", c.Network)
+	if c.Port == "" {
+		return errors.New("port cannot be empty")
 	}
-
-	protocol := NewProtocolFromString(c.Protocol)
-	if !protocol.IsValid() {
-		return fmt.Errorf("invalid protocol %s", c.Protocol)
+	if _, err := types.NewPortFromString(c.Port); err != nil {
+		return fmt.Errorf("invalid port: %w", err)
+	}
+	if v := NewNetworkFromString(c.Network); !v.IsValid() {
+		return fmt.Errorf("invalid network %s", v)
+	}
+	if v := NewProtocolFromString(c.Protocol); !v.IsValid() {
+		return fmt.Errorf("invalid protocol %s", v)
 	}
 
 	security := NewSecurityFromString(c.Security)
 	if !security.IsValid() {
-		return fmt.Errorf("invalid security %s", c.Security)
+		return fmt.Errorf("invalid security %s", security)
 	}
 
 	if security == SecurityTLS {
-		if c.TLSCertPath == "" || c.TLSKeyPath == "" {
-			return errors.New("TLS cert path and key path cannot be empty")
+		if c.TLSCertPath == "" {
+			return errors.New("tls_cert_path cannot be empty")
+		}
+		if c.TLSKeyPath == "" {
+			return errors.New("tls_key_path cannot be empty")
 		}
 	}
 
@@ -83,21 +99,32 @@ func (c *ServerConfig) Validate() error {
 		return errors.New("inbounds cannot be empty")
 	}
 
-	portSet := make(map[uint16]bool)
+	inPortSet := make(map[uint16]bool)
+	outPortSet := make(map[uint16]bool)
 	tagSet := make(map[string]bool)
 
 	for _, inbound := range c.Inbounds {
 		if err := inbound.Validate(); err != nil {
-			return err
+			return fmt.Errorf("invalid inbound: %w", err)
 		}
 
-		if inbound.Port <= 1024 {
-			return errors.New("port must be greater than 1024")
+		port, err := types.NewPortFromString(inbound.Port)
+		if err != nil {
+			panic(err)
 		}
-		if portSet[inbound.Port] {
-			return fmt.Errorf("duplicate port %d", inbound.Port)
+
+		for p := port.InFrom; p <= port.InTo; p++ {
+			if inPortSet[p] {
+				return fmt.Errorf("duplicate in port %d", p)
+			}
+			inPortSet[p] = true
 		}
-		portSet[inbound.Port] = true
+		for p := port.OutFrom; p <= port.OutTo; p++ {
+			if outPortSet[p] {
+				return fmt.Errorf("duplicate out port %d", p)
+			}
+			outPortSet[p] = true
+		}
 
 		tag := inbound.Tag().String()
 		if tagSet[tag] {
@@ -123,7 +150,7 @@ func DefaultServerConfig() ServerConfig {
 		Inbounds: []InboundServerConfig{
 			{
 				Network:     "grpc",
-				Port:        utils.RandomPort(),
+				Port:        fmt.Sprintf("%d", utils.RandomPort()),
 				Protocol:    "vmess",
 				Security:    "none",
 				TLSCertPath: "",
@@ -131,7 +158,7 @@ func DefaultServerConfig() ServerConfig {
 			},
 			{
 				Network:     "tcp",
-				Port:        utils.RandomPort(),
+				Port:        fmt.Sprintf("%d", utils.RandomPort()),
 				Protocol:    "vmess",
 				Security:    "none",
 				TLSCertPath: "",

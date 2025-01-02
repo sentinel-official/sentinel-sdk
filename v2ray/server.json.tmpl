@@ -17,7 +17,7 @@
         },
         {{- range $index, $inbound := .Inbounds }}
         {
-            "port": "{{ $inbound.Port }}",
+            "port": "{{ $inbound.ListenPort }}",
             "protocol": "{{ $inbound.Protocol }}",
             "streamSettings": {
                 "network": "{{ $inbound.Network }}",

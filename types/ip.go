@@ -2,47 +2,141 @@ package types
 
 import (
 	"errors"
-	"net/netip"
+	"fmt"
+	"strconv"
+	"strings"
 )
 
-type NetPrefix struct {
-	netip.Prefix
+type Port struct {
+	InFrom  uint16
+	InTo    uint16
+	OutFrom uint16
+	OutTo   uint16
 }
 
-// NewNetPrefix creates a new NetPrefix object from a given string.
-func NewNetPrefix(s string) (*NetPrefix, error) {
-	if s == "" {
-		return &NetPrefix{}, nil
+// String provides a string representation of the Port struct.
+func (p Port) String() string {
+	switch {
+	case p.InFrom == p.InTo && p.OutFrom == p.OutTo && p.InFrom == p.OutFrom:
+		return fmt.Sprintf("%d", p.InFrom)
+	case p.InFrom == p.InTo && p.OutFrom == p.OutTo:
+		return fmt.Sprintf("%d:%d", p.InFrom, p.OutFrom)
+	case p.InFrom == p.InTo:
+		return fmt.Sprintf("%d:%d-%d", p.InFrom, p.OutFrom, p.OutTo)
+	case p.OutFrom == p.OutTo:
+		return fmt.Sprintf("%d-%d:%d", p.InFrom, p.InTo, p.OutFrom)
+	default:
+		return fmt.Sprintf("%d-%d:%d-%d", p.InFrom, p.InTo, p.OutFrom, p.OutTo)
+	}
+}
+
+// Validate checks if the Port struct values are valid.
+func (p Port) Validate() error {
+	if p.InFrom < 1 || p.InTo > 65535 || p.OutFrom < 1 || p.OutTo > 65535 {
+		return errors.New("numbers must be between 1 and 65535")
+	}
+	if p.InFrom > p.InTo {
+		return errors.New("in_from cannot be greater than in_to")
+	}
+	if p.OutFrom > p.OutTo {
+		return errors.New("out_from cannot be greater than out_to")
+	}
+	if (p.InTo - p.InFrom) != (p.OutTo - p.OutFrom) {
+		return errors.New("in and out ranges must match in size")
 	}
 
-	prefix, err := netip.ParsePrefix(s)
+	return nil
+}
+
+// NewPortFromString parses a port string and returns a Port struct if the string is valid.
+func NewPortFromString(portStr string) (Port, error) {
+	portStr = strings.TrimSpace(portStr)
+	if portStr == "" {
+		return Port{}, nil
+	}
+
+	parts := strings.Split(portStr, ":")
+	if len(parts) > 2 {
+		return Port{}, errors.New("invalid format")
+	}
+
+	inRange := parts[0]
+
+	outRange := inRange
+	if len(parts) == 2 {
+		outRange = parts[1]
+	}
+
+	inFrom, inTo, err := parseRange(inRange)
 	if err != nil {
-		return nil, err
+		return Port{}, fmt.Errorf("invalid in range: %w", err)
 	}
 
-	return &NetPrefix{prefix}, nil
+	outFrom, outTo, err := parseRange(outRange)
+	if err != nil {
+		return Port{}, fmt.Errorf("invalid out range: %w", err)
+	}
+
+	port := Port{
+		InFrom:  inFrom,
+		InTo:    inTo,
+		OutFrom: outFrom,
+		OutTo:   outTo,
+	}
+
+	if err := port.Validate(); err != nil {
+		return Port{}, err
+	}
+
+	return port, nil
 }
 
-// Len calculates the number of addresses in the NetPrefix block.
-func (p NetPrefix) Len() int64 {
-	bitDiff := p.Addr().BitLen() - p.Bits()
-	if bitDiff < 0 {
-		return 0
+// parseRange parses a range string and returns the start and end as uint16.
+func parseRange(rangeStr string) (uint16, uint16, error) {
+	rangeStr = strings.TrimSpace(rangeStr)
+	if rangeStr == "" {
+		return 0, 0, nil
 	}
 
-	return int64(1) << bitDiff
+	parts := strings.Split(rangeStr, "-")
+	if len(parts) > 2 {
+		return 0, 0, errors.New("invalid format")
+	}
+
+	from, err := parsePortNumber(parts[0])
+	if err != nil {
+		return 0, 0, err
+	}
+
+	to := from
+	if len(parts) == 2 {
+		to, err = parsePortNumber(parts[1])
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+
+	if from > to {
+		return 0, 0, errors.New("from cannot be greater than to")
+	}
+
+	return from, to, nil
 }
 
-// Addrs returns a slice of all addresses within the NetPrefix block.
-func (p NetPrefix) Addrs() ([]netip.Addr, error) {
-	if p.Len() > 256 {
-		return nil, errors.New("prefix block is too large")
+// parsePortNumber converts a string to a uint16 port number.
+func parsePortNumber(portStr string) (uint16, error) {
+	portStr = strings.TrimSpace(portStr)
+	if portStr == "" {
+		return 0, nil
 	}
 
-	var addrs []netip.Addr
-	for addr := p.Addr(); p.Contains(addr); addr = addr.Next() {
-		addrs = append(addrs, addr)
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return 0, err
+	}
+	if port < 1 || port > 65535 {
+		return 0, errors.New("number must be between 1 and 65535")
 	}
 
-	return addrs, nil
+	return uint16(port), nil
 }

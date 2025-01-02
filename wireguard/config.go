@@ -34,11 +34,11 @@ func (c *ClientConfig) WriteToFile(name string) error {
 
 // ServerConfig represents the WireGuard server configuration.
 type ServerConfig struct {
+	InInterface  string `mapstructure:"in_interface"`
 	IPv4Addr     string `mapstructure:"ipv4_addr"`
 	IPv6Addr     string `mapstructure:"ipv6_addr"`
-	Interface    string `mapstructure:"interface"`
-	ListenPort   uint16 `mapstructure:"listen_port"`
 	OutInterface string `mapstructure:"out_interface"`
+	Port         string `mapstructure:"port"`
 	PrivateKey   string `mapstructure:"private_key"`
 }
 
@@ -55,37 +55,41 @@ func (c *ServerConfig) Address() string {
 	return strings.Join(addrs, ", ")
 }
 
+func (c *ServerConfig) ListenPort() uint16 {
+	v, err := types.NewPortFromString(c.Port)
+	if err != nil {
+		panic(err)
+	}
+
+	return v.InFrom
+}
+
 // Validate checks that the ServerConfig fields have valid values.
 func (c *ServerConfig) Validate() error {
+	if c.InInterface == "" {
+		return errors.New("in_interface cannot be empty")
+	}
 	if c.IPv4Addr == "" && c.IPv6Addr == "" {
 		return errors.New("either ipv4_addr or ipv6_addr is required")
 	}
 	if c.IPv4Addr != "" {
-		prefix, err := types.NewNetPrefix(c.IPv4Addr)
-		if err != nil {
+		if _, err := types.NewNetPrefixFromString(c.IPv4Addr); err != nil {
 			return fmt.Errorf("invalid ipv4_addr: %w", err)
-		}
-		if prefix.Len() > 256 {
-			return errors.New("ipv4_addr prefix block is too large")
 		}
 	}
 	if c.IPv6Addr != "" {
-		prefix, err := types.NewNetPrefix(c.IPv6Addr)
-		if err != nil {
+		if _, err := types.NewNetPrefixFromString(c.IPv6Addr); err != nil {
 			return fmt.Errorf("invalid ipv6_addr: %w", err)
 		}
-		if prefix.Len() > 256 {
-			return errors.New("ipv6_addr prefix block is too large")
-		}
-	}
-	if c.Interface == "" {
-		return errors.New("interface cannot be empty")
-	}
-	if c.ListenPort == 0 {
-		return errors.New("listen_port cannot be zero")
 	}
 	if c.OutInterface == "" {
 		return errors.New("out_interface cannot be empty")
+	}
+	if c.Port == "" {
+		return errors.New("port cannot be empty")
+	}
+	if _, err := types.NewPortFromString(c.Port); err != nil {
+		return fmt.Errorf("invalid port: %w", err)
 	}
 	if c.PrivateKey == "" {
 		return errors.New("private_key cannot be empty")
@@ -107,22 +111,32 @@ func (c *ServerConfig) WriteToFile(name string) error {
 	return utils.ExecTemplateToFile(string(text), c, name)
 }
 
-func (c *ServerConfig) IPv4Addrs() ([]netip.Addr, error) {
-	prefix, err := types.NewNetPrefix(c.IPv4Addr)
+func (c *ServerConfig) IPv4Addrs() []netip.Addr {
+	prefix, err := types.NewNetPrefixFromString(c.IPv4Addr)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	return prefix.Addrs()
+	addrs, err := prefix.Addrs()
+	if err != nil {
+		panic(err)
+	}
+
+	return addrs
 }
 
-func (c *ServerConfig) IPv6Addrs() ([]netip.Addr, error) {
-	prefix, err := types.NewNetPrefix(c.IPv6Addr)
+func (c *ServerConfig) IPv6Addrs() []netip.Addr {
+	prefix, err := types.NewNetPrefixFromString(c.IPv6Addr)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	return prefix.Addrs()
+	addrs, err := prefix.Addrs()
+	if err != nil {
+		panic(err)
+	}
+
+	return addrs
 }
 
 func DefaultServerConfig() ServerConfig {
@@ -132,11 +146,11 @@ func DefaultServerConfig() ServerConfig {
 	}
 
 	return ServerConfig{
+		InInterface:  "wg0",
 		IPv4Addr:     "10.8.0.1/24",
 		IPv6Addr:     "",
-		Interface:    "wg0",
-		ListenPort:   utils.RandomPort(),
 		OutInterface: "eth0",
+		Port:         fmt.Sprintf("%d", utils.RandomPort()),
 		PrivateKey:   pk.String(),
 	}
 }
