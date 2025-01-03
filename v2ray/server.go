@@ -238,7 +238,7 @@ func (s *Server) PostUp() error {
 		return err
 	}
 
-	return nil
+	return s.cmd.Wait()
 }
 
 // PreDown performs operations before the server process is terminated.
