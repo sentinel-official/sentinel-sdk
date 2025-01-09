@@ -18,10 +18,10 @@ var _ types.ServerService = (*Server)(nil)
 
 // Server represents the WireGuard server instance.
 type Server struct {
-	homeDir string       // Home directory of the WireGuard server.
-	info    []byte       // Information about the server instance.
-	name    string       // Name of the server instance.
-	pm      *PeerManager // Peer manager for handling peer information.
+	homeDir  string          // Home directory of the WireGuard server.
+	name     string          // Name of the server instance.
+	metadata *ServerMetadata // Metadata containing server-specific details.
+	pm       *PeerManager    // Peer manager for handling peer information.
 }
 
 // NewServer creates a new Server instance.
@@ -45,11 +45,6 @@ func (s *Server) WithName(name string) *Server {
 func (s *Server) WithPeerManager(pm *PeerManager) *Server {
 	s.pm = pm
 	return s
-}
-
-// Info returns the server's information.
-func (s *Server) Info() []byte {
-	return s.info
 }
 
 // configFilePath returns the file path of the server's configuration file.
@@ -91,6 +86,11 @@ func (s *Server) PreUp(v interface{}) error {
 		return fmt.Errorf("invalid parameter type %T", v)
 	}
 
+	s.metadata = &ServerMetadata{
+		Port:      cfg.OutPort(),
+		PublicKey: cfg.PublicKey(),
+	}
+
 	// Writes configuration to file.
 	return cfg.WriteToFile(s.configFilePath())
 }
@@ -116,7 +116,7 @@ func (s *Server) PostDown() error {
 }
 
 // AddPeer adds a new peer to the WireGuard server.
-func (s *Server) AddPeer(ctx context.Context, req interface{}) (res []byte, err error) {
+func (s *Server) AddPeer(ctx context.Context, req interface{}) (res interface{}, err error) {
 	// Cast the request to AddPeerRequest type.
 	r, ok := req.(*AddPeerRequest)
 	if !ok {
@@ -149,10 +149,11 @@ func (s *Server) AddPeer(ctx context.Context, req interface{}) (res []byte, err 
 		return nil, err
 	}
 
-	// Append IP addresses to the response.
-	res = append(res, ipv4Addr.AsSlice()...)
-	res = append(res, ipv6Addr.AsSlice()...)
-	return res, nil
+	return &AddPeerResponse{
+		IPv4Addr: ipv4Addr,
+		IPv6Addr: ipv6Addr,
+		Metadata: s.metadata,
+	}, nil
 }
 
 // HasPeer checks if a peer exists in the WireGuard server's peer list.

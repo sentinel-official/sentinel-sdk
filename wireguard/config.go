@@ -55,13 +55,31 @@ func (c *ServerConfig) Address() string {
 	return strings.Join(addrs, ", ")
 }
 
-func (c *ServerConfig) ListenPort() uint16 {
+func (c *ServerConfig) InPort() uint16 {
 	v, err := types.NewPortFromString(c.Port)
 	if err != nil {
 		panic(err)
 	}
 
 	return v.InFrom
+}
+
+func (c *ServerConfig) OutPort() uint16 {
+	v, err := types.NewPortFromString(c.Port)
+	if err != nil {
+		panic(err)
+	}
+
+	return v.OutFrom
+}
+
+func (c *ServerConfig) PublicKey() *Key {
+	pk, err := NewKeyFromString(c.PrivateKey)
+	if err != nil {
+		panic(err)
+	}
+
+	return pk.Public()
 }
 
 // Validate checks that the ServerConfig fields have valid values.
