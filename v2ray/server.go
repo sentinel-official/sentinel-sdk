@@ -21,21 +21,16 @@ import (
 	"github.com/sentinel-official/sentinel-go-sdk/utils"
 )
 
-const (
-	// InfoLen represents the length of the server information (2 bytes for version + 1 byte for type).
-	InfoLen = 2 + 1
-)
-
 // Ensure Server implements types.ServerService interface.
 var _ types.ServerService = (*Server)(nil)
 
 // Server represents the V2Ray server instance.
 type Server struct {
-	cmd     *exec.Cmd    // Command to run the V2Ray server.
-	homeDir string       // Home directory of the V2Ray server.
-	info    []byte       // Information about the server instance.
-	name    string       // Name of the server instance.
-	pm      *PeerManager // Peer manager for handling peer information.
+	cmd      *exec.Cmd         // Command to run the V2Ray server.
+	homeDir  string            // Home directory of the V2Ray server.
+	metadata []*ServerMetadata // Metadata for server's inbound connections.
+	name     string            // Name of the server instance.
+	pm       *PeerManager      // Peer manager for handling peer information.
 }
 
 // NewServer creates a new Server instance.
@@ -149,11 +144,6 @@ func (s *Server) statsServiceClient() (*grpc.ClientConn, statscommand.StatsServi
 	return conn, client, nil
 }
 
-// Info returns the server's information.
-func (s *Server) Info() []byte {
-	return s.info
-}
-
 // Type returns the service type of the server.
 func (s *Server) Type() types.ServiceType {
 	return types.ServiceTypeV2Ray
@@ -205,6 +195,15 @@ func (s *Server) PreUp(v interface{}) error {
 	cfg, ok := v.(*ServerConfig)
 	if !ok {
 		return fmt.Errorf("invalid parameter type %T", v)
+	}
+
+	for _, inbound := range cfg.Inbounds {
+		metadata := &ServerMetadata{
+			Tag:  inbound.Tag(),
+			Port: inbound.OutPort(),
+		}
+
+		s.metadata = append(s.metadata, metadata)
 	}
 
 	// Write configuration to file.
@@ -281,7 +280,7 @@ func (s *Server) PostDown() error {
 }
 
 // AddPeer adds a new peer to the V2Ray server.
-func (s *Server) AddPeer(ctx context.Context, req interface{}) ([]byte, error) {
+func (s *Server) AddPeer(ctx context.Context, req interface{}) (interface{}, error) {
 	// Cast the request to AddPeerRequest type.
 	r, ok := req.(*AddPeerRequest)
 	if !ok {
@@ -304,28 +303,27 @@ func (s *Server) AddPeer(ctx context.Context, req interface{}) ([]byte, error) {
 		}
 	}()
 
-	// Extract information from the request.
-	account := r.Account()
+	// Extract key from the request.
 	email := r.Key()
-	tag := r.Tag()
 
-	// Prepare gRPC request to add a new user to the handler.
-	in := &proxymancommand.AlterInboundRequest{
-		Tag: tag.String(),
-		Operation: serial.ToTypedMessage(
-			&proxymancommand.AddUserOperation{
-				User: &protocol.User{
-					Email:   email,
-					Account: account,
+	for _, md := range s.metadata {
+		// Prepare gRPC request to add a new user to the handler.
+		in := &proxymancommand.AlterInboundRequest{
+			Tag: md.Tag.String(),
+			Operation: serial.ToTypedMessage(
+				&proxymancommand.AddUserOperation{
+					User: &protocol.User{
+						Email:   email,
+						Account: md.Tag.Account(r.UUID),
+					},
 				},
-			},
-		),
-	}
+			),
+		}
 
-	// Send the request to add a user to the handler.
-	_, err = client.AlterInbound(ctx, in)
-	if err != nil {
-		return nil, err
+		// Send the request to add a user to the handler.
+		if _, err := client.AlterInbound(ctx, in); err != nil {
+			return nil, err
+		}
 	}
 
 	// Update the local peer collection with the new peer information.
@@ -336,7 +334,9 @@ func (s *Server) AddPeer(ctx context.Context, req interface{}) ([]byte, error) {
 	)
 
 	// Return nil for success (no additional data to return in response).
-	return nil, nil
+	return &AddPeerResponse{
+		Metadata: s.metadata,
+	}, nil
 }
 
 // HasPeer checks if a peer exists in the V2Ray server's peer list.
@@ -382,26 +382,26 @@ func (s *Server) RemovePeer(ctx context.Context, req interface{}) error {
 		}
 	}()
 
-	// Extract key and tag from the request.
+	// Extract key from the request.
 	email := r.Key()
-	tag := r.Tag()
 
-	// Prepare gRPC request to remove a user from the handler.
-	in := &proxymancommand.AlterInboundRequest{
-		Tag: tag.String(),
-		Operation: serial.ToTypedMessage(
-			&proxymancommand.RemoveUserOperation{
-				Email: email,
-			},
-		),
-	}
+	for _, md := range s.metadata {
+		// Prepare gRPC request to remove a user from the handler.
+		in := &proxymancommand.AlterInboundRequest{
+			Tag: md.Tag.String(),
+			Operation: serial.ToTypedMessage(
+				&proxymancommand.RemoveUserOperation{
+					Email: email,
+				},
+			),
+		}
 
-	// Send the request to remove a user from the handler.
-	_, err = client.AlterInbound(ctx, in)
-	if err != nil {
-		// If the user is not found, continue without error.
-		if !strings.Contains(err.Error(), "not found") {
-			return err
+		// Send the request to remove a user from the handler.
+		if _, err := client.AlterInbound(ctx, in); err != nil {
+			// If the user is not found, continue without error.
+			if !strings.Contains(err.Error(), "not found") {
+				return err
+			}
 		}
 	}
 

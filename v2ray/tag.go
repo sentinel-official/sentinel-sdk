@@ -3,23 +3,41 @@ package v2ray
 import (
 	"fmt"
 
+	"github.com/v2fly/v2ray-core/v5/common/serial"
 	"github.com/v2fly/v2ray-core/v5/common/uuid"
+	"github.com/v2fly/v2ray-core/v5/proxy/vless"
+	"github.com/v2fly/v2ray-core/v5/proxy/vmess"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-// Tag represents a composite data structure combining Protocol, Network, and Security.
+// Tag represents a composite data structure combining ProxyProtocol, TransportProtocol, and TransportSecurity.
 type Tag struct {
-	p Protocol
-	n Network
-	s Security
+	Proxy     ProxyProtocol     `json:"proxy"`
+	Security  TransportSecurity `json:"security"`
+	Transport TransportProtocol `json:"transport"`
 }
 
-// String returns a string representation of the Tag in the format "protocol_network_security".
+// String returns a string representation of the Tag.
 func (t *Tag) String() string {
-	return fmt.Sprintf("%s_%s_%s", t.p, t.n, t.s)
+	return fmt.Sprintf("%s_%s_%s", t.Proxy, t.Security, t.Transport)
 }
 
-// Account generates an account message based on the Protocol stored in the Tag.
+// Account generates an account message based on the ProxyProtocol stored in the Tag.
 func (t *Tag) Account(uid uuid.UUID) *anypb.Any {
-	return t.p.Account(uid)
+	switch t.Proxy {
+	case ProxyProtocolVLess:
+		return serial.ToTypedMessage(
+			&vless.Account{
+				Id: uid.String(),
+			},
+		)
+	case ProxyProtocolVMess:
+		return serial.ToTypedMessage(
+			&vmess.Account{
+				Id: uid.String(),
+			},
+		)
+	default:
+		return nil
+	}
 }

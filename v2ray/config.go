@@ -26,15 +26,15 @@ func (c *ClientConfig) WriteToFile(name string) error {
 
 // InboundServerConfig represents the V2Ray inbound server configuration options.
 type InboundServerConfig struct {
-	Network     string `mapstructure:"network"`
 	Port        string `mapstructure:"port"`
-	Protocol    string `mapstructure:"protocol"`
+	Proxy       string `mapstructure:"proxy"`
 	Security    string `mapstructure:"security"`
 	TLSCertPath string `mapstructure:"tls_cert_path"`
 	TLSKeyPath  string `mapstructure:"tls_key_path"`
+	Transport   string `mapstructure:"transport"`
 }
 
-func (c *InboundServerConfig) ListenPort() string {
+func (c *InboundServerConfig) InPort() string {
 	v, err := types.NewPortFromString(c.Port)
 	if err != nil {
 		panic(err)
@@ -43,16 +43,25 @@ func (c *InboundServerConfig) ListenPort() string {
 	return fmt.Sprintf("%d-%d", v.InFrom, v.InTo)
 }
 
+func (c *InboundServerConfig) OutPort() string {
+	v, err := types.NewPortFromString(c.Port)
+	if err != nil {
+		panic(err)
+	}
+
+	return fmt.Sprintf("%d-%d", v.OutFrom, v.OutTo)
+}
+
 // Tag creates a Tag instance based on the InboundServerConfig configuration.
 func (c *InboundServerConfig) Tag() *Tag {
-	protocol := NewProtocolFromString(c.Protocol)
-	network := NewNetworkFromString(c.Network)
-	security := NewSecurityFromString(c.Security)
+	proxy := NewProxyProtocolFromString(c.Proxy)
+	security := NewTransportSecurityFromString(c.Security)
+	transport := NewTransportProtocolFromString(c.Transport)
 
 	return &Tag{
-		p: protocol,
-		n: network,
-		s: security,
+		Proxy:     proxy,
+		Security:  security,
+		Transport: transport,
 	}
 }
 
@@ -64,25 +73,25 @@ func (c *InboundServerConfig) Validate() error {
 	if _, err := types.NewPortFromString(c.Port); err != nil {
 		return fmt.Errorf("invalid port: %w", err)
 	}
-	if v := NewNetworkFromString(c.Network); !v.IsValid() {
-		return fmt.Errorf("invalid network %s", v)
-	}
-	if v := NewProtocolFromString(c.Protocol); !v.IsValid() {
-		return fmt.Errorf("invalid protocol %s", v)
+	if v := NewProxyProtocolFromString(c.Proxy); !v.IsValid() {
+		return fmt.Errorf("invalid proxy %s", v)
 	}
 
-	security := NewSecurityFromString(c.Security)
+	security := NewTransportSecurityFromString(c.Security)
 	if !security.IsValid() {
 		return fmt.Errorf("invalid security %s", security)
 	}
-
-	if security == SecurityTLS {
+	if security == TransportSecurityTLS {
 		if c.TLSCertPath == "" {
 			return errors.New("tls_cert_path cannot be empty")
 		}
 		if c.TLSKeyPath == "" {
 			return errors.New("tls_key_path cannot be empty")
 		}
+	}
+
+	if v := NewTransportProtocolFromString(c.Transport); !v.IsValid() {
+		return fmt.Errorf("invalid transport %s", v)
 	}
 
 	return nil
@@ -149,20 +158,20 @@ func DefaultServerConfig() ServerConfig {
 	return ServerConfig{
 		Inbounds: []InboundServerConfig{
 			{
-				Network:     "grpc",
 				Port:        fmt.Sprintf("%d", utils.RandomPort()),
-				Protocol:    "vmess",
+				Proxy:       "vmess",
 				Security:    "none",
 				TLSCertPath: "",
 				TLSKeyPath:  "",
+				Transport:   "grpc",
 			},
 			{
-				Network:     "tcp",
 				Port:        fmt.Sprintf("%d", utils.RandomPort()),
-				Protocol:    "vmess",
+				Proxy:       "vmess",
 				Security:    "none",
 				TLSCertPath: "",
 				TLSKeyPath:  "",
+				Transport:   "tcp",
 			},
 		},
 	}

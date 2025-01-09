@@ -1,40 +1,40 @@
 package v2ray
 
-// Security is a custom type used to represent different security settings.
-type Security byte
+// TransportSecurity is a custom type used to represent different transport security settings.
+type TransportSecurity byte
 
-// Constants for Security type with automatic incrementation for each security setting.
+// Constants for TransportSecurity type with automatic incrementation for each security setting.
 const (
-	SecurityUnspecified Security = iota // Default value for unspecified security
-	SecurityNone                        // SecurityNone represents no security
-	SecurityTLS                         // SecurityTLS represents TLS security
+	TransportSecurityUnspecified TransportSecurity = iota // Default value for unspecified transport security
+	TransportSecurityNone                                 // TransportSecurityNone represents no security
+	TransportSecurityTLS                                  // TransportSecurityTLS represents TLS security
 )
 
-// String returns a string representation of the Security type.
-func (s Security) String() string {
-	switch s {
-	case SecurityNone:
+// String returns a string representation of the TransportSecurity type.
+func (t TransportSecurity) String() string {
+	switch t {
+	case TransportSecurityNone:
 		return "none"
-	case SecurityTLS:
+	case TransportSecurityTLS:
 		return "tls"
 	default:
 		return "" // Return empty string for unspecified or unknown security settings
 	}
 }
 
-// IsValid checks if the Security value is valid.
-func (s Security) IsValid() bool {
-	return s.String() != ""
+// IsValid checks if the TransportSecurity value is valid.
+func (t TransportSecurity) IsValid() bool {
+	return t.String() != ""
 }
 
-// NewSecurityFromString converts a string to a Security type.
-func NewSecurityFromString(v string) Security {
+// NewTransportSecurityFromString converts a string to a TransportSecurity type.
+func NewTransportSecurityFromString(v string) TransportSecurity {
 	switch v {
 	case "none":
-		return SecurityNone
+		return TransportSecurityNone
 	case "tls":
-		return SecurityTLS
+		return TransportSecurityTLS
 	default:
-		return SecurityUnspecified // Returns the default security if no match is found
+		return TransportSecurityUnspecified // Returns the default security if no match is found
 	}
 }

@@ -62,7 +62,6 @@ type ClientService interface {
 
 // ServerService defines the interface for server-side service operations.
 type ServerService interface {
-	Info() []byte      // Info returns the information of the server service.
 	Type() ServiceType // Type returns the type of the server service.
 
 	IsUp(context.Context) (bool, error) // IsUp checks if the server service is up.
@@ -74,9 +73,9 @@ type ServerService interface {
 	Down(context.Context) error // Down brings down the server service.
 	PostDown() error            // PostDown performs operations after the service is brought down.
 
-	AddPeer(context.Context, interface{}) ([]byte, error)     // AddPeer adds a peer to the server service.
-	HasPeer(context.Context, interface{}) (bool, error)       // HasPeer checks if a peer exists in the server service.
-	RemovePeer(context.Context, interface{}) error            // RemovePeer removes a peer from the server service.
-	PeerCount() int                                           // PeerCount returns the count of peers.
-	PeerStatistics(context.Context) ([]*PeerStatistic, error) // PeerStatistics returns the statistics for all peers.
+	AddPeer(context.Context, interface{}) (interface{}, error) // AddPeer adds a peer to the server service.
+	HasPeer(context.Context, interface{}) (bool, error)        // HasPeer checks if a peer exists in the server service.
+	RemovePeer(context.Context, interface{}) error             // RemovePeer removes a peer from the server service.
+	PeerCount() int                                            // PeerCount returns the count of peers.
+	PeerStatistics(context.Context) ([]*PeerStatistic, error)  // PeerStatistics returns the statistics for all peers.
 }
