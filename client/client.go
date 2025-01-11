@@ -3,7 +3,6 @@ package client
 import (
 	"time"
 
-	"cosmossdk.io/log"
 	"github.com/cometbft/cometbft/rpc/client/http"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -21,7 +20,6 @@ const ContextKey contextKey = 0
 type Client struct {
 	chainID              string                    // The chain ID used to identify the blockchain network
 	keyring              keyring.Keyring           // Keyring for managing private keys and signatures
-	logger               log.Logger                // Embedded logger
 	protoCodec           codec.ProtoCodecMarshaler // Used for marshaling and unmarshaling protobuf data
 	queryHeight          int64                     // Query height for blockchain data
 	queryProve           bool                      // Flag indicating whether to prove queries
@@ -55,12 +53,6 @@ func (c *Client) WithChainID(chainID string) *Client {
 // WithKeyring assigns the keyring to the Client and returns the updated Client.
 func (c *Client) WithKeyring(keyring keyring.Keyring) *Client {
 	c.keyring = keyring
-	return c
-}
-
-// WithLogger assigns a logger instance to the Client and returns the updated Client.
-func (c *Client) WithLogger(logger log.Logger) *Client {
-	c.logger = logger
 	return c
 }
 
