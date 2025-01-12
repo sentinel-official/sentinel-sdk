@@ -2,6 +2,7 @@ package v2ray
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -104,7 +105,7 @@ func (s *Server) writePIDToFile(pid int) error {
 // clientConn establishes a gRPC client connection to the V2Ray server.
 func (s *Server) clientConn() (*grpc.ClientConn, error) {
 	// Define the target address for the gRPC client connection.
-	target := "127.0.0.1:23"
+	target := "127.0.0.1:2323"
 
 	// Establish a gRPC client connection with specified options:
 	// - WithTransportCredentials: Configures insecure transport credentials for the connection.
@@ -163,6 +164,10 @@ func (s *Server) IsUp(ctx context.Context) (bool, error) {
 	// Retrieve process with the given PID.
 	proc, err := process.NewProcessWithContext(ctx, pid)
 	if err != nil {
+		if errors.Is(err, process.ErrorProcessNotRunning) {
+			return false, nil
+		}
+
 		return false, err
 	}
 

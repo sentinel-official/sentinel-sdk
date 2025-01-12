@@ -8,7 +8,7 @@
     },
     "inbounds": [
         {
-            "port": 23,
+            "port": 2323,
             "protocol": "dokodemo-door",
             "settings": {
                 "address": "127.0.0.1"
@@ -18,9 +18,9 @@
         {{- range $index, $inbound := .Inbounds }}
         {
             "port": "{{ $inbound.InPort }}",
-            "protocol": "{{ $inbound.Protocol }}",
+            "protocol": "{{ $inbound.Proxy }}",
             "streamSettings": {
-                "network": "{{ $inbound.Network }}",
+                "network": "{{ $inbound.Transport }}",
                 "security": "{{ $inbound.Security }}"
                 {{- if eq $inbound.Security "tls" }},
                 "tlsSettings": {

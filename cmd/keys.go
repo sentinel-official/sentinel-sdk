@@ -20,7 +20,7 @@ import (
 func KeysCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:          "keys",
-		Short:        "Sub-commands for managing keys.",
+		Short:        "Sub-commands for managing keys",
 		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Retrieve keyring configuration from environment variables or flags
@@ -58,8 +58,8 @@ func KeysCmd() *cobra.Command {
 	)
 
 	// Add persistent flags
-	rootCmd.PersistentFlags().String("keyring.backend", "os", "backend type for the keyring (e.g., 'os', 'file', or 'test').")
-	rootCmd.PersistentFlags().String("keyring.name", "sentinel", "name identifier for the keyring.")
+	rootCmd.PersistentFlags().String("keyring.backend", "os", "backend type for the keyring (e.g., 'os', 'file', or 'test')")
+	rootCmd.PersistentFlags().String("keyring.name", "sentinel", "name identifier for the keyring")
 
 	return rootCmd
 }
@@ -68,7 +68,7 @@ func KeysCmd() *cobra.Command {
 func keysAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add [name]",
-		Short: "Add a new key with the specified name and optional mnemonic.",
+		Short: "Add a new key with the specified name and optional mnemonic",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			account := viper.GetUint32("key.account")
@@ -138,15 +138,15 @@ func keysAddCmd() *cobra.Command {
 				return err
 			}
 
-			cmd.Println("Key created successfully.")
+			cmd.Println("Key created successfully")
 			return nil
 		},
 	}
 
-	cmd.Flags().Uint32("key.account", 0, "account number to use for key creation.")
-	cmd.Flags().Uint32("key.coin-type", 0, "coin type to use for key creation.")
-	cmd.Flags().Uint32("key.index", 0, "index to use for key creation.")
-	cmd.Flags().String("output-format", "text", "format for command output (json or text).")
+	cmd.Flags().Uint32("key.account", 0, "account number to use for key creation")
+	cmd.Flags().Uint32("key.coin-type", 0, "coin type to use for key creation")
+	cmd.Flags().Uint32("key.index", 0, "index to use for key creation")
+	cmd.Flags().String("output-format", "text", "format for command output (json or text)")
 
 	return cmd
 }
@@ -155,7 +155,7 @@ func keysAddCmd() *cobra.Command {
 func keysDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete [name]",
-		Short: "Delete the key with the specified name.",
+		Short: "Delete the key with the specified name",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Retrieve the client from the command context
@@ -183,7 +183,7 @@ func keysDeleteCmd() *cobra.Command {
 				return err
 			}
 
-			cmd.Println("Key deleted successfully.")
+			cmd.Println("Key deleted successfully")
 			return nil
 		},
 	}
@@ -195,10 +195,8 @@ func keysDeleteCmd() *cobra.Command {
 func keysListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List all available keys.",
+		Short: "List all available keys",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println(viper.AllSettings())
-
 			outputFormat := viper.GetString("output-format")
 
 			// Retrieve the client from the command context
@@ -227,7 +225,7 @@ func keysListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("output-format", "text", "format for command output (json or text).")
+	cmd.Flags().String("output-format", "text", "format for command output (json or text)")
 
 	return cmd
 }
@@ -236,7 +234,7 @@ func keysListCmd() *cobra.Command {
 func keysShowCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show [name]",
-		Short: "Show details of the key with the specified name.",
+		Short: "Show details of the key with the specified name",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			outputFormat := viper.GetString("output-format")
@@ -267,7 +265,7 @@ func keysShowCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("output-format", "text", "format for command output (json or text).")
+	cmd.Flags().String("output-format", "text", "format for command output (json or text)")
 
 	return cmd
 }
