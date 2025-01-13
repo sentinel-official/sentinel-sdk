@@ -14,7 +14,7 @@ require (
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/mattn/go-isatty v0.0.20
 	github.com/rs/zerolog v1.33.0
-	github.com/sentinel-official/hub/v12 v12.0.0-rc8
+	github.com/sentinel-official/hub/v12 v12.0.0-rc9
 	github.com/shirou/gopsutil/v4 v4.24.11
 	github.com/showwin/speedtest-go v1.7.9
 	github.com/spf13/cobra v1.8.1
