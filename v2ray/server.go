@@ -261,6 +261,10 @@ func (s *Server) Down(ctx context.Context) error {
 	// Retrieve process with the given PID.
 	proc, err := process.NewProcessWithContext(ctx, pid)
 	if err != nil {
+		if errors.Is(err, process.ErrorProcessNotRunning) {
+			return nil
+		}
+
 		return err
 	}
 
@@ -269,8 +273,6 @@ func (s *Server) Down(ctx context.Context) error {
 		return err
 	}
 
-	// Reset the command.
-	s.cmd = nil
 	return nil
 }
 
