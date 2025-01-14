@@ -7,10 +7,10 @@ type Error struct {
 }
 
 // NewError creates a new Error with the given code and message.
-func NewError(code int, message string) *Error {
+func NewError(code int, msg string) *Error {
 	return &Error{
 		Code:    code,
-		Message: message,
+		Message: msg,
 	}
 }
 
@@ -22,10 +22,21 @@ type Response struct {
 }
 
 // NewResponseError returns a Response indicating a failure with the specified error details.
-func NewResponseError(code int, message string) *Response {
+// The message parameter can be either an error or a string.
+func NewResponseError(code int, v interface{}) *Response {
+	var msg string
+	switch v := v.(type) {
+	case error:
+		msg = v.Error()
+	case string:
+		msg = v
+	default:
+		msg = "unknown error"
+	}
+
 	return &Response{
 		Success: false,
-		Error:   NewError(code, message),
+		Error:   NewError(code, msg),
 	}
 }
 
