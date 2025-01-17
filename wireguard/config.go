@@ -4,6 +4,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/netip"
 	"strings"
 
@@ -165,7 +166,7 @@ func DefaultServerConfig() ServerConfig {
 
 	return ServerConfig{
 		InInterface:  "wg0",
-		IPv4Addr:     "10.8.0.1/24",
+		IPv4Addr:     fmt.Sprintf("10.%d.%d.1/24", rand.Intn(256), rand.Intn(256)),
 		IPv6Addr:     "",
 		OutInterface: "eth0",
 		Port:         fmt.Sprintf("%d", utils.RandomPort()),
