@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bufio"
-	"context"
 	"errors"
 	"fmt"
 
@@ -18,6 +17,7 @@ import (
 
 // KeysCmd returns a new Cobra command for key management sub-commands.
 func KeysCmd() *cobra.Command {
+	c := client.New()
 	rootCmd := &cobra.Command{
 		Use:          "keys",
 		Short:        "Sub-commands for managing keys",
@@ -38,12 +38,8 @@ func KeysCmd() *cobra.Command {
 			}
 
 			// Create a new client with the keyring and set it in the command context
-			c := client.New().
-				WithKeyring(kr).
-				WithProtoCodec(protoCodec)
-
-			ctx := context.WithValue(cmd.Context(), client.ContextKey, c)
-			cmd.SetContext(ctx)
+			c.WithKeyring(kr)
+			c.WithProtoCodec(protoCodec)
 
 			return nil
 		},
@@ -51,10 +47,10 @@ func KeysCmd() *cobra.Command {
 
 	// Add sub-commands for key management
 	rootCmd.AddCommand(
-		keysAddCmd(),
-		keysDeleteCmd(),
-		keysListCmd(),
-		keysShowCmd(),
+		keysAddCmd(c),
+		keysDeleteCmd(c),
+		keysListCmd(c),
+		keysShowCmd(c),
 	)
 
 	// Add persistent flags
@@ -65,7 +61,7 @@ func KeysCmd() *cobra.Command {
 }
 
 // keysAddCmd creates a new key with the specified name, mnemonic, and bip39 passphrase.
-func keysAddCmd() *cobra.Command {
+func keysAddCmd(c *client.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add [name]",
 		Short: "Add a new key with the specified name and optional mnemonic",
@@ -75,12 +71,6 @@ func keysAddCmd() *cobra.Command {
 			coinType := viper.GetUint32("key.coin-type")
 			index := viper.GetUint32("key.index")
 			outputFormat := viper.GetString("output-format")
-
-			// Retrieve the client from the command context
-			c, ok := cmd.Context().Value(client.ContextKey).(*client.Client)
-			if !ok {
-				return errors.New("client is unset or invalid type")
-			}
 
 			// Check if the key already exists
 			if _, err := c.Key(args[0]); err == nil {
@@ -152,18 +142,12 @@ func keysAddCmd() *cobra.Command {
 }
 
 // keysDeleteCmd removes the key with the specified name.
-func keysDeleteCmd() *cobra.Command {
+func keysDeleteCmd(c *client.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete [name]",
 		Short: "Delete the key with the specified name",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Retrieve the client from the command context
-			c, ok := cmd.Context().Value(client.ContextKey).(*client.Client)
-			if !ok {
-				return errors.New("client is unset or invalid type")
-			}
-
 			if _, err := c.Key(args[0]); err != nil {
 				return err
 			}
@@ -192,18 +176,12 @@ func keysDeleteCmd() *cobra.Command {
 }
 
 // keysListCmd lists all the available keys.
-func keysListCmd() *cobra.Command {
+func keysListCmd(c *client.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all available keys",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			outputFormat := viper.GetString("output-format")
-
-			// Retrieve the client from the command context
-			c, ok := cmd.Context().Value(client.ContextKey).(*client.Client)
-			if !ok {
-				return errors.New("client is unset or invalid type")
-			}
 
 			// Fetch the list of keys
 			keys, err := c.Keys()
@@ -231,19 +209,13 @@ func keysListCmd() *cobra.Command {
 }
 
 // keysShowCmd displays details of the key with the specified name.
-func keysShowCmd() *cobra.Command {
+func keysShowCmd(c *client.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show [name]",
 		Short: "Show details of the key with the specified name",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			outputFormat := viper.GetString("output-format")
-
-			// Retrieve the client from the command context
-			c, ok := cmd.Context().Value(client.ContextKey).(*client.Client)
-			if !ok {
-				return errors.New("client is unset or invalid type")
-			}
 
 			// Fetch the key details
 			key, err := c.Key(args[0])
