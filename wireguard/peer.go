@@ -1,6 +1,7 @@
 package wireguard
 
 import (
+	"errors"
 	"fmt"
 	"net/netip"
 	"sync"
@@ -8,111 +9,119 @@ import (
 
 // Peer represents a network peer with identity and IP addresses.
 type Peer struct {
-	Identity string     // Identity of the peer
-	IPv4Addr netip.Addr // IPv4 address of the peer
-	IPv6Addr netip.Addr // IPv6 address of the peer
+	ID    string // ID of the peer
+	Addrs []netip.Addr
 }
 
 // Key returns the identity of the peer as the key.
 func (p *Peer) Key() string {
-	return p.Identity
+	return p.ID
 }
 
 // PeerManager manages a collection of Peers and their associated IP addresses.
 type PeerManager struct {
-	*sync.RWMutex                  // Read-write mutex for thread-safe access
-	IPv4Addrs     []netip.Addr     // Available IPv4 addresses
-	IPv6Addrs     []netip.Addr     // Available IPv6 addresses
-	m             map[string]*Peer // Map of identities to Peers
+	m     map[string]*Peer
+	pools []*IPPool
+	rwm   *sync.RWMutex
 }
 
 // NewPeerManager creates a new instance of PeerManager.
-func NewPeerManager(ipv4Addrs, ipv6Addrs []netip.Addr) *PeerManager {
+func NewPeerManager(pools ...*IPPool) *PeerManager {
 	return &PeerManager{
-		RWMutex:   &sync.RWMutex{},
-		IPv4Addrs: ipv4Addrs,
-		IPv6Addrs: ipv6Addrs,
-		m:         make(map[string]*Peer),
+		m:     make(map[string]*Peer),
+		pools: pools,
+		rwm:   &sync.RWMutex{},
 	}
 }
 
 // Get retrieves a Peer from the PeerManager by its identity.
-func (pm *PeerManager) Get(v string) *Peer {
-	pm.RLock()
-	defer pm.RUnlock()
+func (m *PeerManager) Get(v string) *Peer {
+	m.rwm.RLock()
+	defer m.rwm.RUnlock()
 
-	return pm.m[v]
+	return m.m[v]
 }
 
 // Put adds a new Peer with the given identity to the PeerManager.
 // It assigns available IPv4 and IPv6 addresses to the Peer.
-func (pm *PeerManager) Put(v string) (ipv4Addr, ipv6Addr netip.Addr, err error) {
-	pm.Lock()
-	defer pm.Unlock()
+func (m *PeerManager) Put(id string) (addrs []netip.Addr, err error) {
+	m.rwm.Lock()
+	defer m.rwm.Unlock()
+
+	if id == "" {
+		return nil, errors.New("peer id is empty")
+	}
 
 	// Check if the Peer already exists
-	if _, ok := pm.m[v]; ok {
-		return netip.Addr{}, netip.Addr{}, fmt.Errorf("peer %s already exists", v)
+	if _, ok := m.m[id]; ok {
+		return nil, fmt.Errorf("peer %s already exists", id)
 	}
 
-	// Check if there are available IP addresses
-	if len(pm.IPv4Addrs) == 0 || len(pm.IPv6Addrs) == 0 {
-		return netip.Addr{}, netip.Addr{}, fmt.Errorf("no available IP addresses")
+	defer func() {
+		if len(addrs) != len(m.pools) {
+			for i := 0; i < len(addrs); i++ {
+				if err := m.pools[i].Put(addrs[i]); err != nil {
+					panic(fmt.Errorf("failed to put addr %s to pool: %w", addrs[i], err))
+				}
+			}
+		}
+	}()
+
+	for _, pool := range m.pools {
+		addr, err := pool.Get()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get addr from pool: %w", err)
+		}
+
+		addrs = append(addrs, addr)
 	}
-
-	// Assign the first available IPv4 and IPv6 addresses
-	ipv4Addr = pm.IPv4Addrs[0]
-	ipv6Addr = pm.IPv6Addrs[0]
-
-	// Remove assigned IP addresses from the available list
-	pm.IPv4Addrs = pm.IPv4Addrs[1:]
-	pm.IPv6Addrs = pm.IPv6Addrs[1:]
 
 	// Create and store the new Peer
-	pm.m[v] = &Peer{
-		Identity: v,
-		IPv4Addr: ipv4Addr,
-		IPv6Addr: ipv6Addr,
+	m.m[id] = &Peer{
+		ID:    id,
+		Addrs: addrs,
 	}
 
-	return ipv4Addr, ipv6Addr, nil
+	return addrs, nil
 }
 
 // Delete removes a Peer from the PeerManager by its identity.
-func (pm *PeerManager) Delete(v string) {
-	pm.Lock()
-	defer pm.Unlock()
+func (m *PeerManager) Delete(v string) {
+	m.rwm.Lock()
+	defer m.rwm.Unlock()
 
 	// Retrieve the Peer and its IP addresses
-	item, ok := pm.m[v]
+	item, ok := m.m[v]
 	if !ok {
 		return
 	}
 
-	// Add the IPv4 and IPv6 addresses back to the available list
-	pm.IPv4Addrs = append(pm.IPv4Addrs, item.IPv4Addr)
-	pm.IPv6Addrs = append(pm.IPv6Addrs, item.IPv6Addr)
+	for i := 0; i < len(item.Addrs); i++ {
+		if err := m.pools[i].Put(item.Addrs[i]); err != nil {
+			panic(fmt.Errorf("failed to put addr %s to pool: %w", item.Addrs[i], err))
+		}
+	}
 
 	// Remove the Peer from the PeerManager
-	delete(pm.m, v)
+	delete(m.m, v)
 }
 
 // Len returns the number of Peers in the PeerManager.
-func (pm *PeerManager) Len() int {
-	pm.RLock()
-	defer pm.RUnlock()
+func (m *PeerManager) Len() int {
+	m.rwm.RLock()
+	defer m.rwm.RUnlock()
 
-	return len(pm.m)
+	return len(m.m)
 }
 
 // Iterate iterates over each Peer in the PeerManager and applies the provided function.
 // If the function returns true, the iteration stops.
 // If the function returns an error, the iteration stops and the error is returned.
-func (pm *PeerManager) Iterate(fn func(key string, value *Peer) (bool, error)) error {
-	pm.RLock()
-	defer pm.RUnlock()
+func (m *PeerManager) Iterate(fn func(key string, value *Peer) (bool, error)) error {
+	m.rwm.RLock()
+	defer m.rwm.RUnlock()
 
-	for key, value := range pm.m {
+	for key, value := range m.m {
 		stop, err := fn(key, value)
 		if err != nil {
 			return err

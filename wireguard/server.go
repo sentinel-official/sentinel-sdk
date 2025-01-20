@@ -1,7 +1,9 @@
 package wireguard
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -62,7 +64,7 @@ func (s *Server) IsUp(ctx context.Context) (bool, error) {
 	// Retrieves the interface name.
 	iface, err := s.interfaceName()
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get interface name: %w", err)
 	}
 
 	// Executes the 'wg show' command to check the interface status.
@@ -71,8 +73,19 @@ func (s *Server) IsUp(ctx context.Context) (bool, error) {
 		s.execFile("wg"),
 		strings.Fields(fmt.Sprintf("show %s", iface))...,
 	)
+
+	// Capture stderr output.
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	// Run the command and handle errors.
 	if err := cmd.Run(); err != nil {
-		return false, err
+		// Check if the error matches "No such device".
+		if strings.Contains(stderr.String(), "No such device") {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("failed to run command: %w", err)
 	}
 
 	return true, nil
@@ -92,7 +105,11 @@ func (s *Server) PreUp(v interface{}) error {
 	}
 
 	// Writes configuration to file.
-	return cfg.WriteToFile(s.configFilePath())
+	if err := cfg.WriteToFile(s.configFilePath()); err != nil {
+		return fmt.Errorf("failed to write config: %w", err)
+	}
+
+	return nil
 }
 
 // PostUp performs operations after the server process is started.
@@ -109,7 +126,7 @@ func (s *Server) PreDown() error {
 func (s *Server) PostDown() error {
 	// Removes configuration file.
 	if err := utils.RemoveFile(s.configFilePath()); err != nil {
-		return err
+		return fmt.Errorf("failed to remove config: %w", err)
 	}
 
 	return nil
@@ -130,28 +147,40 @@ func (s *Server) AddPeer(ctx context.Context, req interface{}) (res interface{},
 	identity := r.Key()
 
 	// Add peer to the peer manager and retrieve assigned IP addresses.
-	ipv4Addr, ipv6Addr, err := s.pm.Put(identity)
+	addrs, err := s.pm.Put(identity)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to put peer: %w", err)
+	}
+	if len(addrs) == 0 {
+		return nil, errors.New("no addrs available")
+	}
+
+	var ips []string
+	for _, addr := range addrs {
+		size := 32
+		if addr.Is6() {
+			size = 128
+		}
+
+		ips = append(ips, fmt.Sprintf("%s/%d", addr, size))
 	}
 
 	// Executes the 'wg set' command to add the peer to the WireGuard interface.
 	cmd := exec.CommandContext(
 		ctx,
 		s.execFile("wg"),
-		strings.Fields(fmt.Sprintf("set %s peer %s allowed-ips %s/32,%s/128", s.name, identity, ipv4Addr, ipv6Addr))...,
+		strings.Fields(fmt.Sprintf("set %s peer %s allowed-ips %s", s.name, identity, strings.Join(ips, ",")))...,
 	)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 
 	// Run the command and check for errors.
 	if err := cmd.Run(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to run command: %w", err)
 	}
 
 	return &AddPeerResponse{
-		IPv4Addr: ipv4Addr,
-		IPv6Addr: ipv6Addr,
+		Addrs:    addrs,
 		Metadata: s.metadata,
 	}, nil
 }
@@ -200,7 +229,7 @@ func (s *Server) RemovePeer(ctx context.Context, req interface{}) error {
 
 	// Run the command and check for errors.
 	if err := cmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("failed to run command: %w", err)
 	}
 
 	// Remove the peer information from the local collection.
@@ -218,7 +247,7 @@ func (s *Server) PeerStatistics(ctx context.Context) (items []*types.PeerStatist
 	// Retrieves the interface name.
 	iface, err := s.interfaceName()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get interface name: %w", err)
 	}
 
 	// Executes the 'wg show' command to get transfer statistics.
@@ -228,7 +257,7 @@ func (s *Server) PeerStatistics(ctx context.Context) (items []*types.PeerStatist
 		strings.Fields(fmt.Sprintf("show %s transfer", iface))...,
 	).Output()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to run command: %w", err)
 	}
 
 	// Split the command output into lines and process each line.
@@ -242,13 +271,13 @@ func (s *Server) PeerStatistics(ctx context.Context) (items []*types.PeerStatist
 		// Parse upload traffic stats.
 		uploadBytes, err := strconv.ParseInt(columns[1], 10, 64)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse upload size: %w", err)
 		}
 
 		// Parse download traffic stats.
 		downloadBytes, err := strconv.ParseInt(columns[2], 10, 64)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse download size: %w", err)
 		}
 
 		// Append peer statistics to the result collection.
