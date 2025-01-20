@@ -15,7 +15,7 @@ type NetPrefix struct {
 // NewNetPrefixFromString creates a new NetPrefix object from a given string.
 func NewNetPrefixFromString(s string) (*NetPrefix, error) {
 	if s == "" {
-		return &NetPrefix{}, nil
+		return nil, errors.New("net prefix is empty")
 	}
 
 	prefix, err := netip.ParsePrefix(s)

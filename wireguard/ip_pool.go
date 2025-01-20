@@ -27,7 +27,7 @@ type IPPool struct {
 func NewIPPoolFromString(s string) (*IPPool, error) {
 	prefix, err := types.NewNetPrefixFromString(s)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get net prefix: %w", err)
 	}
 
 	p := &IPPool{
