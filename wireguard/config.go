@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"net/netip"
 	"os"
 	"strings"
 
@@ -139,32 +138,44 @@ func (c *ServerConfig) WriteToFile(name string) error {
 	return os.Chmod(name, 0400)
 }
 
-func (c *ServerConfig) IPv4Addrs() []netip.Addr {
-	prefix, err := types.NewNetPrefixFromString(c.IPv4Addr)
+func (c *ServerConfig) IPv4Pool() (*IPPool, error) {
+	pool, err := NewIPPoolFromString(c.IPv4Addr)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to get ip pool: %w", err)
 	}
 
-	addrs, err := prefix.Addrs()
-	if err != nil {
-		panic(err)
-	}
-
-	return addrs
+	return pool, nil
 }
 
-func (c *ServerConfig) IPv6Addrs() []netip.Addr {
-	prefix, err := types.NewNetPrefixFromString(c.IPv6Addr)
+func (c *ServerConfig) IPv6Pool() (*IPPool, error) {
+	pool, err := NewIPPoolFromString(c.IPv6Addr)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to get ip pool: %w", err)
 	}
 
-	addrs, err := prefix.Addrs()
-	if err != nil {
-		panic(err)
+	return pool, nil
+}
+
+func (c *ServerConfig) IPPools() ([]*IPPool, error) {
+	var pools []*IPPool
+	if c.IPv4Addr != "" {
+		pool, err := c.IPv4Pool()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ipv4 pool: %w", err)
+		}
+
+		pools = append(pools, pool)
+	}
+	if c.IPv6Addr != "" {
+		pool, err := c.IPv6Pool()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ipv6 pool: %w", err)
+		}
+
+		pools = append(pools, pool)
 	}
 
-	return addrs
+	return pools, nil
 }
 
 func DefaultServerConfig() ServerConfig {
