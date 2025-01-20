@@ -18,10 +18,14 @@ type ClientConfig struct{}
 func (c *ClientConfig) WriteToFile(name string) error {
 	text, err := fs.ReadFile("client.json.tmpl")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read template: %w", err)
 	}
 
-	return utils.ExecTemplateToFile(string(text), c, name)
+	if err := utils.ExecTemplateToFile(string(text), c, name); err != nil {
+		return fmt.Errorf("failed to execute template to file: %w", err)
+	}
+
+	return nil
 }
 
 // InboundServerConfig represents the V2Ray inbound server configuration options.
@@ -148,10 +152,14 @@ func (c *ServerConfig) Validate() error {
 func (c *ServerConfig) WriteToFile(name string) error {
 	text, err := fs.ReadFile("server.json.tmpl")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read template: %w", err)
 	}
 
-	return utils.ExecTemplateToFile(string(text), c, name)
+	if err := utils.ExecTemplateToFile(string(text), c, name); err != nil {
+		return fmt.Errorf("failed to execute template to file: %w", err)
+	}
+
+	return nil
 }
 
 func DefaultServerConfig() ServerConfig {

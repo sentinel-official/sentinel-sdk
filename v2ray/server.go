@@ -77,13 +77,13 @@ func (s *Server) readPIDFromFile() (int32, error) {
 	// Read PID from the PID file.
 	data, err := os.ReadFile(name)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	// Convert PID data to integer.
 	pid, err := strconv.ParseInt(string(data), 10, 32)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to parse pid: %w", err)
 	}
 
 	return int32(pid), nil
@@ -96,7 +96,7 @@ func (s *Server) writePIDToFile(pid int) error {
 
 	// Write PID to file with appropriate permissions.
 	if err := os.WriteFile(s.pidFilePath(), data, 0644); err != nil {
-		return err
+		return fmt.Errorf("failed to write file: %w", err)
 	}
 
 	return nil
@@ -109,10 +109,15 @@ func (s *Server) clientConn() (*grpc.ClientConn, error) {
 
 	// Establish a gRPC client connection with specified options:
 	// - WithTransportCredentials: Configures insecure transport credentials for the connection.
-	return grpc.NewClient(
+	conn, err := grpc.NewClient(
 		target,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create grpc client: %w", err)
+	}
+
+	return conn, nil
 }
 
 // handlerServiceClient establishes a gRPC client connection to the V2Ray server's handler service.
@@ -120,7 +125,7 @@ func (s *Server) handlerServiceClient() (*grpc.ClientConn, proxymancommand.Handl
 	// Establish a gRPC client connection using the clientConn method.
 	conn, err := s.clientConn()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to get grpc client connection: %w", err)
 	}
 
 	// Create a new HandlerServiceClient using the established connection.
@@ -135,7 +140,7 @@ func (s *Server) statsServiceClient() (*grpc.ClientConn, statscommand.StatsServi
 	// Establish a gRPC client connection using the clientConn method.
 	conn, err := s.clientConn()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to get grpc client connection: %w", err)
 	}
 
 	// Create a new StatsServiceClient using the established connection.
@@ -155,7 +160,7 @@ func (s *Server) IsUp(ctx context.Context) (bool, error) {
 	// Read PID from file.
 	pid, err := s.readPIDFromFile()
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to read pid from file: %w", err)
 	}
 	if pid == 0 {
 		return false, nil
@@ -168,13 +173,13 @@ func (s *Server) IsUp(ctx context.Context) (bool, error) {
 			return false, nil
 		}
 
-		return false, err
+		return false, fmt.Errorf("failed to get process: %w", err)
 	}
 
 	// Check if the process is running.
 	ok, err := proc.IsRunningWithContext(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to check running process: %w", err)
 	}
 	if !ok {
 		return false, nil
@@ -183,7 +188,7 @@ func (s *Server) IsUp(ctx context.Context) (bool, error) {
 	// Retrieve the name of the process.
 	name, err := proc.NameWithContext(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get process name: %w", err)
 	}
 
 	// Check if the process name matches constant v2ray.
@@ -212,7 +217,11 @@ func (s *Server) PreUp(v interface{}) error {
 	}
 
 	// Write configuration to file.
-	return cfg.WriteToFile(s.configFilePath())
+	if err := cfg.WriteToFile(s.configFilePath()); err != nil {
+		return fmt.Errorf("failed to write config to file: %w", err)
+	}
+
+	return nil
 }
 
 // Up starts the V2Ray server process.
@@ -227,7 +236,11 @@ func (s *Server) Up(ctx context.Context) error {
 	s.cmd.Stderr = os.Stderr
 
 	// Starts the V2Ray server process.
-	return s.cmd.Start()
+	if err := s.cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start command: %w", err)
+	}
+
+	return nil
 }
 
 // PostUp performs operations after the server process is started.
@@ -239,10 +252,14 @@ func (s *Server) PostUp() error {
 
 	// Write PID to file.
 	if err := s.writePIDToFile(s.cmd.Process.Pid); err != nil {
-		return err
+		return fmt.Errorf("failed to write pid to file: %w", err)
 	}
 
-	return s.cmd.Wait()
+	if err := s.cmd.Wait(); err != nil {
+		return fmt.Errorf("failed to wait for command: %w", err)
+	}
+
+	return nil
 }
 
 // PreDown performs operations before the server process is terminated.
@@ -255,7 +272,7 @@ func (s *Server) Down(ctx context.Context) error {
 	// Read PID from file.
 	pid, err := s.readPIDFromFile()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read pid from file: %w", err)
 	}
 
 	// Retrieve process with the given PID.
@@ -265,12 +282,12 @@ func (s *Server) Down(ctx context.Context) error {
 			return nil
 		}
 
-		return err
+		return fmt.Errorf("failed to get process: %w", err)
 	}
 
 	// Terminate the process.
 	if err := proc.TerminateWithContext(ctx); err != nil {
-		return err
+		return fmt.Errorf("failed to terminate process: %w", err)
 	}
 
 	return nil
@@ -280,7 +297,7 @@ func (s *Server) Down(ctx context.Context) error {
 func (s *Server) PostDown() error {
 	// Remove PID file.
 	if err := utils.RemoveFile(s.pidFilePath()); err != nil {
-		return err
+		return fmt.Errorf("failed to remove file: %w", err)
 	}
 
 	return nil
@@ -300,7 +317,7 @@ func (s *Server) AddPeer(ctx context.Context, req interface{}) (interface{}, err
 	// Establish a gRPC client connection to the handler service.
 	conn, client, err := s.handlerServiceClient()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get handler service client: %w", err)
 	}
 
 	// Ensure the connection is closed when done.
@@ -329,7 +346,7 @@ func (s *Server) AddPeer(ctx context.Context, req interface{}) (interface{}, err
 
 		// Send the request to add a user to the handler.
 		if _, err := client.AlterInbound(ctx, in); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to alter inbound: %w", err)
 		}
 	}
 
@@ -379,7 +396,7 @@ func (s *Server) RemovePeer(ctx context.Context, req interface{}) error {
 	// Establish a gRPC client connection to the handler service.
 	conn, client, err := s.handlerServiceClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get handler service client: %w", err)
 	}
 
 	// Ensure the connection is closed when done.
@@ -407,7 +424,7 @@ func (s *Server) RemovePeer(ctx context.Context, req interface{}) error {
 		if _, err := client.AlterInbound(ctx, in); err != nil {
 			// If the user is not found, continue without error.
 			if !strings.Contains(err.Error(), "not found") {
-				return err
+				return fmt.Errorf("failed to alter inbound: %w", err)
 			}
 		}
 	}
@@ -429,7 +446,7 @@ func (s *Server) PeerStatistics(ctx context.Context) (items []*types.PeerStatist
 	// Establish a gRPC client connection to the stats service.
 	conn, client, err := s.statsServiceClient()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get stats service client: %w", err)
 	}
 
 	// Ensure the connection is closed when done.
@@ -452,7 +469,7 @@ func (s *Server) PeerStatistics(ctx context.Context) (items []*types.PeerStatist
 		if err != nil {
 			// If the stat is not found, continue to the next peer.
 			if !strings.Contains(err.Error(), "not found") {
-				return false, err
+				return false, fmt.Errorf("failed to get stats: %w", err)
 			}
 		}
 
@@ -473,7 +490,7 @@ func (s *Server) PeerStatistics(ctx context.Context) (items []*types.PeerStatist
 		if err != nil {
 			// If the stat is not found, continue to the next peer.
 			if !strings.Contains(err.Error(), "not found") {
-				return false, err
+				return false, fmt.Errorf("failed to get stats: %w", err)
 			}
 		}
 
@@ -498,7 +515,7 @@ func (s *Server) PeerStatistics(ctx context.Context) (items []*types.PeerStatist
 
 	// Iterate over each peer and retrieve statistics.
 	if err := s.pm.Iterate(fn); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to iterate peers: %w", err)
 	}
 
 	// Return the constructed collection of peer statistics.

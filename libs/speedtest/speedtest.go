@@ -12,17 +12,17 @@ import (
 func performTests(target *speedtest.Server) error {
 	// Perform the ping test
 	if err := target.PingTest(nil); err != nil {
-		return err
+		return fmt.Errorf("failed to perform ping test: %w", err)
 	}
 
 	// Perform the download test
 	if err := target.DownloadTest(); err != nil {
-		return err
+		return fmt.Errorf("failed to perform download test: %w", err)
 	}
 
 	// Perform the upload test
 	if err := target.UploadTest(); err != nil {
-		return err
+		return fmt.Errorf("failed to perform upload test: %w", err)
 	}
 
 	// Wait for the context to be ready after the tests
@@ -38,13 +38,13 @@ func Run() (dlSpeed, ulSpeed math.Int, err error) {
 	// Fetch the list of servers from the Speedtest service
 	servers, err := st.FetchServers()
 	if err != nil {
-		return math.Int{}, math.Int{}, err
+		return math.Int{}, math.Int{}, fmt.Errorf("failed to fetch servers: %w", err)
 	}
 
 	// Find the best server from the list
 	targets, err := servers.FindServer(nil)
 	if err != nil {
-		return math.Int{}, math.Int{}, err
+		return math.Int{}, math.Int{}, fmt.Errorf("failed to find targets: %w", err)
 	}
 
 	// Iterate through the list of target servers to find a valid result

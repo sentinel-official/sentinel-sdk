@@ -45,13 +45,13 @@ func (c *Client) readPIDFromFile() (int32, error) {
 	// Reads PID from the PID file.
 	data, err := os.ReadFile(c.pidFilePath())
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	// Converts PID data to integer.
 	pid, err := strconv.ParseInt(string(data), 10, 32)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to parse pid: %w", err)
 	}
 
 	return int32(pid), nil
@@ -64,7 +64,7 @@ func (c *Client) writePIDToFile(pid int) error {
 
 	// Writes PID to file with appropriate permissions.
 	if err := os.WriteFile(c.pidFilePath(), data, 0644); err != nil {
-		return err
+		return fmt.Errorf("failed to write file: %w", err)
 	}
 
 	return nil
@@ -80,19 +80,19 @@ func (c *Client) IsUp(ctx context.Context) (bool, error) {
 	// Reads PID from file.
 	pid, err := c.readPIDFromFile()
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to read pid from file: %w", err)
 	}
 
 	// Retrieves process with the given PID.
 	proc, err := process.NewProcessWithContext(ctx, pid)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get process: %w", err)
 	}
 
 	// Checks if the process is running.
 	ok, err := proc.IsRunningWithContext(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to check running process: %w", err)
 	}
 	if !ok {
 		return false, nil
@@ -101,7 +101,7 @@ func (c *Client) IsUp(ctx context.Context) (bool, error) {
 	// Retrieves the name of the process.
 	name, err := proc.NameWithContext(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get process name: %w", err)
 	}
 
 	// Checks if the process name matches constant v2ray.
@@ -121,7 +121,11 @@ func (c *Client) PreUp(v interface{}) error {
 	}
 
 	// Writes configuration to file.
-	return cfg.WriteToFile(c.configFilePath())
+	if err := cfg.WriteToFile(c.configFilePath()); err != nil {
+		return fmt.Errorf("failed to write to file: %w", err)
+	}
+
+	return nil
 }
 
 // Up starts the V2Ray client process.
@@ -136,7 +140,11 @@ func (c *Client) Up(ctx context.Context) error {
 	c.cmd.Stderr = os.Stderr
 
 	// Starts the V2Ray client process.
-	return c.cmd.Start()
+	if err := c.cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start command: %w", err)
+	}
+
+	return nil
 }
 
 // PostUp performs operations after the client process is started.
@@ -148,7 +156,7 @@ func (c *Client) PostUp() error {
 
 	// Writes PID to file.
 	if err := c.writePIDToFile(c.cmd.Process.Pid); err != nil {
-		return err
+		return fmt.Errorf("failed to write pid to file: %w", err)
 	}
 
 	return nil
@@ -164,18 +172,18 @@ func (c *Client) Down(ctx context.Context) error {
 	// Reads PID from file.
 	pid, err := c.readPIDFromFile()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read pid from file: %w", err)
 	}
 
 	// Retrieves process with the given PID.
 	proc, err := process.NewProcessWithContext(ctx, pid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get process: %w", err)
 	}
 
 	// Terminates the process.
 	if err := proc.TerminateWithContext(ctx); err != nil {
-		return err
+		return fmt.Errorf("failed to terminate process: %w", err)
 	}
 
 	// Resets the command.
@@ -187,12 +195,12 @@ func (c *Client) Down(ctx context.Context) error {
 func (c *Client) PostDown() error {
 	// Removes configuration file.
 	if err := utils.RemoveFile(c.configFilePath()); err != nil {
-		return err
+		return fmt.Errorf("failed to remove file: %w", err)
 	}
 
 	// Removes PID file.
 	if err := utils.RemoveFile(c.pidFilePath()); err != nil {
-		return err
+		return fmt.Errorf("failed to remove file: %w", err)
 	}
 
 	return nil

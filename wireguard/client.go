@@ -82,7 +82,7 @@ func (c *Client) PreDown() error {
 func (c *Client) PostDown() error {
 	// Removes configuration file.
 	if err := utils.RemoveFile(c.configFilePath()); err != nil {
-		return err
+		return fmt.Errorf("failed to remove file: %w", err)
 	}
 
 	return nil

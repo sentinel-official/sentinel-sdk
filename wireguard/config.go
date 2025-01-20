@@ -27,14 +27,18 @@ func (c *ClientConfig) Validate() error {
 func (c *ClientConfig) WriteToFile(name string) error {
 	text, err := fs.ReadFile("client.conf.tmpl")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read template: %w", err)
 	}
 
 	if err := utils.ExecTemplateToFile(string(text), c, name); err != nil {
-		return err
+		return fmt.Errorf("failed to execute template to file: %w", err)
 	}
 
-	return os.Chmod(name, 0400)
+	if err := os.Chmod(name, 0400); err != nil {
+		return fmt.Errorf("failed to change file permissions: %w", err)
+	}
+
+	return nil
 }
 
 // ServerConfig represents the WireGuard server configuration.
@@ -128,14 +132,18 @@ func (c *ServerConfig) Validate() error {
 func (c *ServerConfig) WriteToFile(name string) error {
 	text, err := fs.ReadFile("server.conf.tmpl")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read template: %w", err)
 	}
 
 	if err := utils.ExecTemplateToFile(string(text), c, name); err != nil {
-		return err
+		return fmt.Errorf("failed to execute template to file: %w", err)
 	}
 
-	return os.Chmod(name, 0400)
+	if err := os.Chmod(name, 0400); err != nil {
+		return fmt.Errorf("failed to change file permissions: %w", err)
+	}
+
+	return nil
 }
 
 func (c *ServerConfig) IPv4Pool() (*types.IPPool, error) {
