@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/netip"
+	"os"
 	"strings"
 
 	"github.com/sentinel-official/sentinel-go-sdk/types"
@@ -30,7 +31,11 @@ func (c *ClientConfig) WriteToFile(name string) error {
 		return err
 	}
 
-	return utils.ExecTemplateToFile(string(text), c, name)
+	if err := utils.ExecTemplateToFile(string(text), c, name); err != nil {
+		return err
+	}
+
+	return os.Chmod(name, 0400)
 }
 
 // ServerConfig represents the WireGuard server configuration.
@@ -127,7 +132,11 @@ func (c *ServerConfig) WriteToFile(name string) error {
 		return err
 	}
 
-	return utils.ExecTemplateToFile(string(text), c, name)
+	if err := utils.ExecTemplateToFile(string(text), c, name); err != nil {
+		return err
+	}
+
+	return os.Chmod(name, 0400)
 }
 
 func (c *ServerConfig) IPv4Addrs() []netip.Addr {
