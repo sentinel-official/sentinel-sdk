@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/netip"
 	"sync"
+
+	"github.com/sentinel-official/sentinel-go-sdk/types"
 )
 
 // Peer represents a network peer with identity and IP addresses.
@@ -21,12 +23,12 @@ func (p *Peer) Key() string {
 // PeerManager manages a collection of Peers and their associated IP addresses.
 type PeerManager struct {
 	m     map[string]*Peer
-	pools []*IPPool
+	pools []*types.IPPool
 	rwm   *sync.RWMutex
 }
 
 // NewPeerManager creates a new instance of PeerManager.
-func NewPeerManager(pools ...*IPPool) *PeerManager {
+func NewPeerManager(pools ...*types.IPPool) *PeerManager {
 	return &PeerManager{
 		m:     make(map[string]*Peer),
 		pools: pools,

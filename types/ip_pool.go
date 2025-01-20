@@ -1,12 +1,10 @@
-package wireguard
+package types
 
 import (
 	"errors"
 	"fmt"
 	"net/netip"
 	"sync"
-
-	"github.com/sentinel-official/sentinel-go-sdk/types"
 )
 
 // IPPool manages a pool of IP addresses, including assigned, reserved, and unassigned addresses.
@@ -16,8 +14,8 @@ type IPPool struct {
 	reserved   map[netip.Addr]bool // Tracks IPs that are reserved.
 	unassigned []netip.Addr        // List of unassigned IPs available for allocation.
 
-	addr   netip.Addr       // Current IP address in the pool.
-	prefix *types.NetPrefix // The network prefix associated with the pool.
+	addr   netip.Addr // Current IP address in the pool.
+	prefix *NetPrefix // The network prefix associated with the pool.
 
 	m *sync.Mutex // Mutex to ensure thread-safe access to the pool.
 }
@@ -25,7 +23,7 @@ type IPPool struct {
 // NewIPPoolFromString creates a new IPPool using a given network prefix string.
 // It reserves the network address and, if applicable, the broadcast address for the prefix.
 func NewIPPoolFromString(s string) (*IPPool, error) {
-	prefix, err := types.NewNetPrefixFromString(s)
+	prefix, err := NewNetPrefixFromString(s)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get net prefix: %w", err)
 	}

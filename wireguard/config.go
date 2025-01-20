@@ -138,8 +138,8 @@ func (c *ServerConfig) WriteToFile(name string) error {
 	return os.Chmod(name, 0400)
 }
 
-func (c *ServerConfig) IPv4Pool() (*IPPool, error) {
-	pool, err := NewIPPoolFromString(c.IPv4Addr)
+func (c *ServerConfig) IPv4Pool() (*types.IPPool, error) {
+	pool, err := types.NewIPPoolFromString(c.IPv4Addr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ip pool: %w", err)
 	}
@@ -147,8 +147,8 @@ func (c *ServerConfig) IPv4Pool() (*IPPool, error) {
 	return pool, nil
 }
 
-func (c *ServerConfig) IPv6Pool() (*IPPool, error) {
-	pool, err := NewIPPoolFromString(c.IPv6Addr)
+func (c *ServerConfig) IPv6Pool() (*types.IPPool, error) {
+	pool, err := types.NewIPPoolFromString(c.IPv6Addr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ip pool: %w", err)
 	}
@@ -156,8 +156,8 @@ func (c *ServerConfig) IPv6Pool() (*IPPool, error) {
 	return pool, nil
 }
 
-func (c *ServerConfig) IPPools() ([]*IPPool, error) {
-	var pools []*IPPool
+func (c *ServerConfig) IPPools() ([]*types.IPPool, error) {
+	var pools []*types.IPPool
 	if c.IPv4Addr != "" {
 		pool, err := c.IPv4Pool()
 		if err != nil {
