@@ -20,10 +20,10 @@ var _ types.ServerService = (*Server)(nil)
 
 // Server represents the WireGuard server instance.
 type Server struct {
-	homeDir  string          // Home directory of the WireGuard server.
-	name     string          // Name of the server instance.
-	metadata *ServerMetadata // Metadata containing server-specific details.
-	pm       *PeerManager    // Peer manager for handling peer information.
+	homeDir  string            // Home directory of the WireGuard server.
+	metadata []*ServerMetadata // Metadata containing server-specific details.
+	name     string            // Name of the server instance.
+	pm       *PeerManager      // Peer manager for handling peer information.
 }
 
 // NewServer creates a new Server instance.
@@ -99,9 +99,11 @@ func (s *Server) PreUp(v interface{}) error {
 		return fmt.Errorf("invalid parameter type %T", v)
 	}
 
-	s.metadata = &ServerMetadata{
-		Port:      cfg.OutPort(),
-		PublicKey: cfg.PublicKey(),
+	s.metadata = []*ServerMetadata{
+		{
+			Port:      cfg.OutPort(),
+			PublicKey: cfg.PublicKey(),
+		},
 	}
 
 	// Writes configuration to file.
